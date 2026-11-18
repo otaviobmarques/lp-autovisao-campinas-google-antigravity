@@ -282,25 +282,22 @@ export function App() {
         <div className="wrap">
           <ul>
             <li>
-              <Icon name="store" />5 Lojas em Campinas/SP
+              <Icon name="store" />5 lojas em Campinas/SP
             </li>
             <li>
               <Icon name="shield" />
-              ECVs Credenciadas pelo DETRAN-SP
+              Credenciadas pelo DETRAN-SP
             </li>
             <li>
               <Icon name="clock" />
-              Plantão aos Sábados até 16h (Unid. Abolição)
-            </li>
-            <li>
-              <Icon name="phone" />
-              Central{' '}
-              <a href={`tel:${CENTRAL_TEL}`} style={{ color: 'inherit', marginLeft: 4 }}>
-                {CENTRAL_DISPLAY}
-              </a>
+              Plantão Sábado até 16h (Abolição)
             </li>
           </ul>
           <span className="tb-r">
+            <a href={`tel:${CENTRAL_TEL}`} className="tb-area">
+              <Icon name="phone" />
+              Central {CENTRAL_DISPLAY}
+            </a>
             <a
               href={buildWhatsAppUrl(
                 'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
@@ -364,7 +361,7 @@ export function App() {
                 aria-expanded={openDropdown === 'servicos'}
                 onClick={() => setOpenDropdown((d) => (d === 'servicos' ? null : 'servicos'))}
               >
-                Todas as Vistorias
+                Vistorias
                 <Icon name="chev" className="i dd-chev" />
               </button>
               <div className="dd-menu">
@@ -397,23 +394,13 @@ export function App() {
             </a>
 
             <a
-              href="#remotion-tour"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollToSection('remotion-tour');
-              }}
-            >
-              Vídeo Interativo
-            </a>
-
-            <a
               href="#unidades"
               onClick={(e) => {
                 e.preventDefault();
                 scrollToSection('unidades');
               }}
             >
-              5 Lojas Campinas
+              5 Lojas
             </a>
 
             <a
@@ -445,7 +432,7 @@ export function App() {
               rel="noopener"
             >
               <Icon name="wa" />
-              <span>Agendar no WhatsApp</span>
+              <span>Agendar</span>
             </a>
           </nav>
 

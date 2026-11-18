@@ -2,10 +2,81 @@
    Auto Visão Campinas · Estilos Exclusivos (DS Franquia 1.0 + DS Site 1.1)
    ========================================================================== */
 
+/* Prevenção absoluta de rolagem lateral em qualquer resolução */
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-x: clip !important;
+}
+
+.topbar .wrap,
+.hdr .wrap {
+  min-width: 0;
+  max-width: calc(var(--wrap) + 2 * var(--gut));
+}
+
+.topbar ul {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.topbar li,
+.tb-r a {
+  white-space: nowrap;
+}
+
+.nav {
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.nav > a,
+.dd-btn {
+  padding: 9px 10px;
+  font-size: 14.5px;
+}
+
+.nav a.btn-wa {
+  padding: 0 16px;
+  min-height: 42px;
+  font-size: 14.5px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1180px) {
+  .topbar ul li:nth-child(3) {
+    display: none;
+  }
+  .nav > a,
+  .dd-btn {
+    padding: 8px 7px;
+    font-size: 13.5px;
+  }
+  .logo {
+    width: 148px;
+  }
+}
+
+@media (max-width: 960px) {
+  .nav > a,
+  .dd-btn {
+    padding: 14px 12px;
+    font-size: 17px;
+  }
+  .nav a.btn-wa {
+    min-height: 48px;
+    font-size: 16px;
+    justify-content: center;
+  }
+}
+
 /* Remotion Showreel Section */
 .remotion-wrap {
   display: grid;
   gap: 24px;
+  min-width: 0;
 }
 
 .remotion-nav {
@@ -43,6 +114,8 @@
 
 .remotion-stage {
   position: relative;
+  width: 100%;
+  max-width: 100%;
   border-radius: 24px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15);
@@ -53,7 +126,7 @@
 /* Destaque Duplo: Vistoria do DETRAN + Vistoria Cautelar */
 .flagship-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 28px;
 }
 
@@ -63,12 +136,13 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 22px;
-  padding: clamp(28px, 4vw, 40px);
+  padding: clamp(24px, 3.5vw, 40px);
   border-radius: 24px;
   overflow: hidden;
   isolation: isolate;
   box-shadow: var(--shadow-lg);
   transition: transform 0.28s var(--ease), box-shadow 0.28s var(--ease);
+  min-width: 0;
 }
 
 .flagship-card:hover {
@@ -88,7 +162,7 @@
 
 .flagship-card h3 {
   color: #fff;
-  font-size: clamp(28px, 3vw, 36px);
+  font-size: clamp(26px, 2.8vw, 36px);
   line-height: 1.08;
 }
 
@@ -98,7 +172,7 @@
 }
 
 .flagship-card p {
-  font-size: 16.5px;
+  font-size: 16px;
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.92);
 }
@@ -114,7 +188,7 @@
   align-items: flex-start;
   gap: 10px;
   font-weight: 600;
-  font-size: 15.5px;
+  font-size: 15px;
   color: #fff;
 }
 
@@ -142,7 +216,7 @@
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
   gap: 32px;
   align-items: center;
-  padding: clamp(28px, 4vw, 44px);
+  padding: clamp(24px, 3.5vw, 44px);
   border-radius: 24px;
   background: radial-gradient(120% 120% at 85% 20%, #2C2A2B 0%, #151415 65%);
   color: #fff;
@@ -161,8 +235,8 @@
   border-radius: 999px;
   background: var(--brand);
   color: #fff;
-  font: 900 13px/1 var(--f-head);
-  letter-spacing: 0.12em;
+  font: 900 12.5px/1.2 var(--f-head);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -183,12 +257,14 @@
 .duty-card-photo span {
   position: absolute;
   left: 12px;
+  right: 12px;
   bottom: 12px;
   padding: 7px 12px;
   border-radius: 999px;
   background: #18743B;
   color: #fff;
-  font: 800 13px/1 var(--f-head);
+  font: 800 12.5px/1.2 var(--f-head);
+  text-align: center;
 }
 
 /* Modal de Detalhes de cada Serviço */
@@ -277,9 +353,10 @@
   background: #fff;
   color: var(--ink);
   border-radius: 24px;
-  padding: clamp(24px, 4vw, 36px);
+  padding: clamp(20px, 3.5vw, 36px);
   box-shadow: 0 32px 70px -24px rgba(0, 0, 0, 0.45);
   border: 1px solid var(--line);
+  min-width: 0;
 }
 
 .schedule-form {
@@ -295,6 +372,7 @@
 .field {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .field label {
@@ -310,7 +388,7 @@
   border-radius: 12px;
   border: 1.5px solid var(--line);
   background: #fff;
-  font: 500 15.5px var(--f-body);
+  font: 500 15px var(--f-body);
   color: var(--impact);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -365,5 +443,11 @@
     font-size: 12.5px;
     padding: 0 12px;
     min-height: 38px;
+  }
+  .flagship-card {
+    padding: 22px 18px;
+  }
+  .duty-banner {
+    padding: 22px 18px;
   }
 }
