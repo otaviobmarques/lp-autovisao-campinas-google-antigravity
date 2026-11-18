@@ -6,5 +6,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('remotion') || id.includes('AutoVisaoShowreel')) {
+            return 'remotion-player';
+          }
+        },
+      },
+    },
   },
 });

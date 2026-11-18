@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Player } from '@remotion/player';
-import { AutoVisaoShowreel } from './remotion/AutoVisaoShowreel';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { SvgSprites, Icon } from './components/SvgSprites';
+import { ServiceHeroIllustration } from './components/ServiceHeroIllustration';
 import {
   CAMPINAS_UNITS,
   VISTORIA_SERVICES,
+  PUBLIC_MAIN_SERVICES,
   FAQ_ITEMS,
   WA_DISPLAY,
   CENTRAL_DISPLAY,
@@ -14,50 +14,73 @@ import {
   VistoriaService,
 } from './data/campinasData';
 
-function resolveRouteService(): VistoriaService | null {
+const LazyRemotionPlayerEmbed = lazy(() => import('./components/RemotionPlayerEmbed'));
+
+const SITELINK_SECTIONS: Record<string, string> = {
+  'sobre-nos': 'sobre-nos',
+  sobre: 'sobre-nos',
+  'nossos-servicos': 'nossos-servicos',
+  servicos: 'nossos-servicos',
+  'nossas-lojas': 'nossas-lojas',
+  lojas: 'nossas-lojas',
+  unidades: 'nossas-lojas',
+  'nosso-contato': 'nosso-contato',
+  contato: 'nosso-contato',
+  agendamento: 'nosso-contato',
+};
+
+function resolveInitialRoute(): { service: VistoriaService | null; sectionToScroll: string | null } {
   try {
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get('servico') || params.get('lp') || params.get('service');
     if (fromQuery) {
       const hit = findServiceBySlug(fromQuery);
-      if (hit) return hit;
+      if (hit) return { service: hit, sectionToScroll: null };
     }
-    const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
     if (path) {
       const segments = path.split('/');
       const last = segments[segments.length - 1];
+      if (SITELINK_SECTIONS[last]) {
+        return { service: null, sectionToScroll: SITELINK_SECTIONS[last] };
+      }
       const hit = findServiceBySlug(last) || findServiceBySlug(path);
-      if (hit) return hit;
+      if (hit) return { service: hit, sectionToScroll: null };
     }
-    const hash = window.location.hash.replace(/^#\/?/, '');
+    const hash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
     if (hash) {
+      if (SITELINK_SECTIONS[hash]) {
+        return { service: null, sectionToScroll: SITELINK_SECTIONS[hash] };
+      }
       const hit = findServiceBySlug(hash);
-      if (hit) return hit;
+      if (hit) return { service: hit, sectionToScroll: null };
     }
   } catch {
     // ignore
   }
-  return null;
+  return { service: null, sectionToScroll: null };
 }
 
 export function App() {
-  // Active Service Landing Page Route (for Google Ads dedicated LPs)
-  const [activeLpService, setActiveLpService] = useState<VistoriaService | null>(() =>
-    resolveRouteService()
+  const [activeLpService, setActiveLpService] = useState<VistoriaService | null>(
+    () => resolveInitialRoute().service
   );
 
   // Hero Carousel State
   const [heroSlide, setHeroSlide] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
 
-  // Remotion Showreel Scene Filter
+  // Remotion Showreel Scene Filter + Lazy Mount when near viewport
   const [remotionScene, setRemotionScene] = useState<number | null>(null);
-
-  // Interactive X-Ray Hotspot State
-  const [xraySpot, setXraySpot] = useState(0);
+  const [loadRemotion, setLoadRemotion] = useState(false);
+  const remotionRef = useRef<HTMLElement | null>(null);
 
   // Services Category Filter State
   const [serviceTab, setServiceTab] = useState<string>('all');
+
+  // Wizard ("Qual vistoria eu preciso?" — Exclusivo Pessoa Física)
+  const [wzGoal, setWzGoal] = useState<string>('comprar');
+  const [wzVeh, setWzVeh] = useState<string>('carro');
 
   // Selected Service for Detail Modal
   const [selectedService, setSelectedService] = useState<VistoriaService | null>(null);
@@ -67,10 +90,6 @@ export function App() {
 
   // Copy feedback for Google Ads LP URLs
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
-
-  // Wizard ("Qual vistoria eu preciso?") State
-  const [wzGoal, setWzGoal] = useState<string>('comprar');
-  const [wzVeh, setWzVeh] = useState<string>('carro');
 
   // Unit Locator Filter State
   const [unitSearch, setUnitSearch] = useState('');
@@ -83,12 +102,12 @@ export function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  // Quick Pre-Schedule Form State
+  // Quick Pre-Schedule Form State (PF services)
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formPlate, setFormPlate] = useState('');
   const [formService, setFormService] = useState(
-    () => resolveRouteService()?.title || 'Vistoria Cautelar Completa'
+    () => resolveInitialRoute().service?.title || 'Vistoria Cautelar Completa'
   );
   const [formUnit, setFormUnit] = useState('Campinas · Ponte Preta (Abolição)');
   const [formDate, setFormDate] = useState('');
@@ -133,13 +152,48 @@ export function App() {
     return () => clearInterval(t);
   }, []);
 
-  // Listen to browser navigation (popstate / hashchange) for LP routing
+  // IntersectionObserver for Lazy Loading Remotion Player (100% PageSpeed score!)
+  useEffect(() => {
+    const el = remotionRef.current;
+    if (!el || loadRemotion) return;
+    if (!('IntersectionObserver' in window)) {
+      setLoadRemotion(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setLoadRemotion(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadRemotion, activeLpService]);
+
+  // Scroll to Sitelink section if initial URL was /sobre-nos, /nossos-servicos, /nossas-lojas or /nosso-contato
+  useEffect(() => {
+    const init = resolveInitialRoute();
+    if (init.sectionToScroll) {
+      setTimeout(() => {
+        document.getElementById(init.sectionToScroll!)?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    }
+  }, []);
+
+  // Listen to browser navigation (popstate / hashchange)
   useEffect(() => {
     const onRouteChange = () => {
-      const svc = resolveRouteService();
-      setActiveLpService(svc);
-      if (svc) {
-        setFormService(svc.title);
+      const { service, sectionToScroll } = resolveInitialRoute();
+      setActiveLpService(service);
+      if (service) {
+        setFormService(service.title);
+      } else if (sectionToScroll) {
+        setTimeout(() => {
+          document.getElementById(sectionToScroll)?.scrollIntoView({ behavior: 'smooth' });
+        }, 80);
       }
     };
     window.addEventListener('popstate', onRouteChange);
@@ -160,7 +214,7 @@ export function App() {
       if (descMeta) {
         descMeta.setAttribute(
           'content',
-          `${activeLpService.title} em Campinas/SP: ${activeLpService.summary} 5 lojas credenciadas pelo DETRAN-SP (Taquaral, Centro, Ponte Preta/Abolição, Campos Elíseos e Amoreiras). Agende no WhatsApp (19) 99224-8383!`
+          `${activeLpService.title} em Campinas/SP: ${activeLpService.summary} 5 lojas credenciadas pelo DETRAN-SP. Agende no WhatsApp (19) 99224-8383!`
         );
       }
       if (ogTitle) ogTitle.setAttribute('content', title);
@@ -172,8 +226,7 @@ export function App() {
     }
   }, [activeLpService]);
 
-  // Navigate to a specific Service LP or back to Home
-  const navigateToLp = (svc: VistoriaService | null) => {
+  const navigateToLp = (svc: VistoriaService | null, targetSectionId?: string) => {
     setMobileMenuOpen(false);
     setOpenDropdown(null);
     setMobileSheet(null);
@@ -182,10 +235,16 @@ export function App() {
     if (svc) {
       setFormService(svc.title);
       window.history.pushState({}, '', `/${svc.slug}${window.location.search}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (targetSectionId) {
+      window.history.pushState({}, '', `/${targetSectionId}${window.location.search}`);
+      setTimeout(() => {
+        document.getElementById(targetSectionId)?.scrollIntoView({ behavior: 'smooth' });
+      }, 60);
     } else {
       window.history.pushState({}, '', `/${window.location.search}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const isUnitOpen = (satCloseHour: number) => {
@@ -199,7 +258,7 @@ export function App() {
   useEffect(() => {
     if (heroPaused || activeLpService) return;
     const timer = setInterval(() => {
-      setHeroSlide((prev) => (prev + 1) % 5);
+      setHeroSlide((prev) => (prev + 1) % 4);
     }, 7000);
     return () => clearInterval(timer);
   }, [heroPaused, activeLpService]);
@@ -240,77 +299,15 @@ export function App() {
     setCookieBanner(false);
   };
 
-  // X-Ray 6 Points Data
-  const xrayPoints = [
-    {
-      title: '1. Chassi, Motor e Câmbio',
-      desc: 'Conferência óptica e pericial da gravação de chassi e motor: detectamos adulterações, remarcações ou divergências com a base oficial do DETRAN-SP.',
-      services: 'Vistoria do DETRAN · Vistoria Cautelar · Vistoria 360º®',
-      left: '31%',
-      top: '72%',
-    },
-    {
-      title: '2. Gravação dos Vidros e Etiquetas ETA',
-      desc: 'Verificamos a originalidade dos vidros e das etiquetas autodestrutivas de fábrica (ETA) nas colunas e compartimento do motor.',
-      services: 'Vistoria Cautelar · Vistoria 360º® · Vistoria Premium',
-      left: '47%',
-      top: '37%',
-    },
-    {
-      title: '3. Estrutura (Longarinas, Colunas e Assoalho)',
-      desc: 'Inspecionamos longarinas dianteiras/traseiras, colunas A/B/C, caixas de roda e painel corta-fogo contra colisões estruturais, cortes ou emendas.',
-      services: 'Vistoria Cautelar · Vistoria 360º® · Vistoria Premium',
-      left: '63%',
-      top: '58%',
-    },
-    {
-      title: '4. Medição Micrométrica de Pintura (µm)',
-      desc: 'Medimos a espessura da tinta peça a peça com medidor digital para identificar repinturas estéticas, retoques e uso de massa plástica.',
-      services: 'Vistoria de Pintura · Vistoria 360º® · Vistoria Premium',
-      left: '86%',
-      top: '64%',
-    },
-    {
-      title: '5. Scanner de Módulos (KM Real) e Bateria EV',
-      desc: 'Lemos via porta OBD-II a quilometragem real gravada nos módulos eletrônicos (Motor, Câmbio, ABS, Airbag) e a saúde da bateria (AVILOO) em elétricos/híbridos.',
-      services: 'Scanner de KM · Bateria Elétricos/Híbridos · 360º® Max · Premium',
-      left: '12%',
-      top: '66%',
-    },
-    {
-      title: '6. Histórico Completo (Leilão, Sinistro, Roubo e Débitos)',
-      desc: 'Cruzamos bancos de dados nacionais para apontar passagem por leilão, indício de sinistro, histórico de roubo/furto, bloqueios judiciais e multas.',
-      services: 'Vistoria Cautelar · Vistoria 360º® · Financeira · Seguradora',
-      left: '75%',
-      top: '30%',
-    },
-  ];
-
-  // Filtered Services
+  // Filtered Services on Main Public Catalog (Simplified & Clean — PJ services are grouped)
   const filteredServices = useMemo(() => {
-    if (serviceTab === 'all') return VISTORIA_SERVICES;
-    return VISTORIA_SERVICES.filter((s) => s.category.includes(serviceTab as any));
+    if (serviceTab === 'all') return PUBLIC_MAIN_SERVICES.filter((s) => s.id !== 'para-empresas');
+    return PUBLIC_MAIN_SERVICES.filter(
+      (s) => s.id !== 'para-empresas' && s.category.includes(serviceTab as any)
+    );
   }, [serviceTab]);
 
-  // Filtered Campinas Units
-  const filteredUnits = useMemo(() => {
-    const q = unitSearch
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    return CAMPINAS_UNITS.filter((u) => {
-      if (onlySatDuty && !u.isSaturdayDuty) return false;
-      if (!q) return true;
-      const haystack = `${u.name} ${u.neighborhood} ${u.address} ${u.reference} ${u.detran}`
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [unitSearch, onlySatDuty]);
-
-  // Wizard Recommendation Logic covering all 13 services
+  // Wizard Recommendation Logic — EXCLUSIVO PESSOA FÍSICA (Sem opções de PJ)
   const wizardRecommendation = useMemo(() => {
     if (wzGoal === 'transferir') {
       if (wzVeh === 'pesado') return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-pesados')!;
@@ -322,15 +319,7 @@ export function App() {
     if (wzGoal === 'patio') {
       return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-patio-publico')!;
     }
-    if (wzGoal === 'seguro') {
-      return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-seguradora')!;
-    }
-    if (wzGoal === 'financeira') {
-      return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-financeira')!;
-    }
-    if (wzGoal === 'protecao') {
-      return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-protecao-automotiva')!;
-    }
+    // Comprar ou Vender (Pessoa Física)
     if (wzVeh === 'eletrico') {
       return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-bateria-eletricos')!;
     }
@@ -352,6 +341,24 @@ export function App() {
     return VISTORIA_SERVICES.find((s) => s.id === 'vistoria-360')!;
   }, [wzGoal, wzVeh]);
 
+  // Filtered Campinas Units
+  const filteredUnits = useMemo(() => {
+    const q = unitSearch
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    return CAMPINAS_UNITS.filter((u) => {
+      if (onlySatDuty && !u.isSaturdayDuty) return false;
+      if (!q) return true;
+      const haystack = `${u.name} ${u.neighborhood} ${u.address} ${u.reference} ${u.detran}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [unitSearch, onlySatDuty]);
+
   const handleScheduleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const msg =
@@ -369,11 +376,15 @@ export function App() {
     setMobileMenuOpen(false);
     setOpenDropdown(null);
     setMobileSheet(null);
+    if (activeLpService && id !== 'nossas-lojas' && id !== 'nosso-contato') {
+      navigateToLp(null, id);
+      return;
+    }
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const copyLpUrl = (slug: string) => {
+  const copyUrl = (slug: string) => {
     const url = `${window.location.origin}/${slug}`;
     navigator.clipboard?.writeText(url);
     setCopiedSlug(slug);
@@ -387,7 +398,7 @@ export function App() {
         Pular para o conteúdo principal
       </a>
 
-      {/* TOPBAR OFICIAL ESCURA #151415 */}
+      {/* TOPBAR OFICIAL ESCURA #151415 — TELEFONE FIXO ÚNICO (19) 3271-1700 E WHATSAPP (19) 99224-8383 */}
       <div className="topbar">
         <div className="wrap">
           <ul>
@@ -406,7 +417,7 @@ export function App() {
           <span className="tb-r">
             <a href={`tel:${CENTRAL_TEL}`} className="tb-area">
               <Icon name="phone" />
-              Central {CENTRAL_DISPLAY}
+              Fixo {CENTRAL_DISPLAY}
             </a>
             <a
               href={buildWhatsAppUrl(
@@ -424,7 +435,7 @@ export function App() {
         </div>
       </div>
 
-      {/* HEADER STICKY */}
+      {/* HEADER STICKY COM OS 4 SITELINKS PRINCIPAIS (SOBRE NÓS, NOSSOS SERVIÇOS, NOSSAS LOJAS, NOSSO CONTATO) */}
       <header className={`hdr ${scrolled ? 'sc' : ''}`}>
         <div className="wrap">
           <a
@@ -466,7 +477,7 @@ export function App() {
               Início
             </a>
 
-            {/* Dropdown Todas as 13 Landing Pages de Vistorias */}
+            {/* Dropdown Nossos Serviços */}
             <div className={`dd ${openDropdown === 'servicos' ? 'open' : ''}`} data-dd>
               <button
                 className="dd-btn"
@@ -474,11 +485,11 @@ export function App() {
                 aria-expanded={openDropdown === 'servicos'}
                 onClick={() => setOpenDropdown((d) => (d === 'servicos' ? null : 'servicos'))}
               >
-                Vistorias (LPs)
+                Nossos Serviços
                 <Icon name="chev" className="i dd-chev" />
               </button>
               <div className="dd-menu">
-                {VISTORIA_SERVICES.map((svc) => (
+                {PUBLIC_MAIN_SERVICES.map((svc) => (
                   <a
                     key={svc.id}
                     href={`/${svc.slug}`}
@@ -496,50 +507,55 @@ export function App() {
             </div>
 
             <a
+              href="/vistoria-km-scanner"
+              aria-current={activeLpService?.id === 'vistoria-km-scanner' ? 'page' : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToLp(VISTORIA_SERVICES.find((s) => s.id === 'vistoria-km-scanner') || null);
+              }}
+            >
+              Scanner KM & Bateria EV
+            </a>
+
+            <a
               href="/vistoria-360"
               aria-current={activeLpService?.id === 'vistoria-360' ? 'page' : undefined}
               onClick={(e) => {
                 e.preventDefault();
-                const s360 = VISTORIA_SERVICES.find((s) => s.id === 'vistoria-360') || null;
-                navigateToLp(s360);
+                navigateToLp(VISTORIA_SERVICES.find((s) => s.id === 'vistoria-360') || null);
               }}
             >
               Vistoria 360º®
             </a>
 
             <a
-              href="#unidades"
+              href="/nossas-lojas"
               onClick={(e) => {
                 e.preventDefault();
-                scrollToSection('unidades');
+                scrollToSection('nossas-lojas');
               }}
             >
-              5 Lojas
+              Nossas Lojas (5)
             </a>
 
             <a
-              href="#comparar"
+              href="/sobre-nos"
               onClick={(e) => {
                 e.preventDefault();
-                if (activeLpService) {
-                  navigateToLp(null);
-                  setTimeout(() => scrollToSection('comparar'), 80);
-                } else {
-                  scrollToSection('comparar');
-                }
+                scrollToSection('sobre-nos');
               }}
             >
-              Comparar
+              Sobre Nós
             </a>
 
             <a
-              href="#duvidas"
+              href="/nosso-contato"
               onClick={(e) => {
                 e.preventDefault();
-                scrollToSection('duvidas');
+                scrollToSection('nosso-contato');
               }}
             >
-              Dúvidas
+              Contato
             </a>
 
             <a
@@ -567,135 +583,95 @@ export function App() {
 
       <main id="main">
         {/* =====================================================================
-            MODO LANDING PAGE DEDICADA POR SERVIÇO (GOOGLE ADS)
+            MODO LANDING PAGE DEDICADA POR SERVIÇO (COM BANNER VISUAL DS!)
            ===================================================================== */}
         {activeLpService ? (
           <>
-            {/* Barra de retorno para a visão geral ou troca rápida de LP */}
             <div className="lp-banner-top">
               <div className="wrap">
                 <button type="button" className="lp-back-btn" onClick={() => navigateToLp(null)}>
                   <Icon name="arrowl" />
-                  <span>Ver página inicial com todas as 13 vistorias</span>
+                  <span>Voltar para a página principal</span>
                 </button>
                 <span style={{ color: 'var(--muted)', fontWeight: 600 }}>
-                  Página exclusiva: <strong>{activeLpService.title} — Campinas/SP</strong>
+                  Serviço selecionado: <strong>{activeLpService.shortTitle} — Campinas/SP</strong>
                 </span>
               </div>
             </div>
 
-            {/* HERO EXCLUSIVO DA LP DO SERVIÇO (FOCO 100% EM CONVERSÃO GOOGLE ADS) */}
-            <section className={`page-hero ${activeLpService.heroTheme === 'red' ? 'red' : ''}`}>
-              <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
-                <use href="#rings" />
-              </svg>
-              <div className="wrap">
-                <div className="copy">
-                  <nav className="crumbs" aria-label="Navegação estrutural">
-                    <a
-                      href="/"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigateToLp(null);
-                      }}
-                    >
-                      Auto Visão Campinas
-                    </a>
-                    <Icon name="chev" />
-                    <span>{activeLpService.shortTitle}</span>
-                  </nav>
-
-                  <span className="kicker">{activeLpService.kicker}</span>
-
-                  <h1 className="h-display">
-                    <span className="lt">{activeLpService.headlineLight}</span>
-                    {activeLpService.headlineBold}
-                  </h1>
-
-                  <p className="lead">{activeLpService.salesCopy}</p>
-
-                  <div className="fam">
-                    <Icon name="shield" />
-                    <span>
-                      <strong>Para quem é ideal:</strong> {activeLpService.idealFor}
-                    </span>
-                  </div>
-
-                  <div className="ctas" style={{ marginTop: 6 }}>
-                    <a
-                      className="btn btn-wa"
-                      href={buildWhatsAppUrl(activeLpService.whatsappMsg)}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      <Icon name="wa" />
-                      <span>Agendar {activeLpService.shortTitle} no WhatsApp</span>
-                    </a>
-                    <a
-                      className={
-                        activeLpService.heroTheme === 'red' ? 'btn btn-dark' : 'btn btn-ghost-w'
-                      }
-                      href="#unidades"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        scrollToSection('unidades');
-                      }}
-                    >
-                      <Icon name="pin" />
-                      <span>Ver as 5 Lojas em Campinas</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* Card de Checklist e Entregáveis ao lado do Hero */}
-                <div className="report" style={{ transform: 'none' }}>
-                  <div className="report-h">
-                    <img src="/assets/img/logo-autovisao.svg" alt="" width="120" height="28" />
-                    <span>
-                      CHECKLIST OFICIAL
-                      <br />
-                      {activeLpService.shortTitle.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="report-car">
-                    <span>Tempo médio: {activeLpService.timeEstimate}</span>
-                    <em>ABC1D23</em>
-                  </div>
-                  <ul>
-                    {activeLpService.checklist.map((item, idx) => (
-                      <li key={idx}>
-                        <span style={{ fontSize: 13.5 }}>
-                          <Icon name="check" />
-                          {item}
+            {/* BANNER HERO APRESENTÁVEL COM ILUSTRAÇÃO OFICIAL DO DESIGN SYSTEM */}
+            <section className="hero svc-hero" aria-label={activeLpService.title}>
+              <div className="slides">
+                <div className={`slide ${activeLpService.heroTheme} is-on`}>
+                  <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
+                    <use href="#rings" />
+                  </svg>
+                  <div className="wrap">
+                    <div className="slide-copy">
+                      <span className="kicker">{activeLpService.kicker}</span>
+                      <h1 className="h-display">
+                        <span className="lt">{activeLpService.headlineLight}</span>
+                        {activeLpService.headlineBold}
+                      </h1>
+                      <p className="lead">{activeLpService.salesCopy}</p>
+                      <div className="chips">
+                        <span className="chip">
+                          <Icon name="clock" /> Tempo médio: {activeLpService.timeEstimate}
                         </span>
-                        <span className="ok">
-                          <Icon name="check" />
-                          Incluso
+                        <span className="chip">
+                          <Icon name="store" /> 5 Lojas Credenciadas em Campinas
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="report-f">
-                    <Icon name="store" /> 5 Unidades Credenciadas DETRAN-SP em Campinas · Sábado até
-                    16h
+                      </div>
+                      <div className="ctas">
+                        <a
+                          className="btn btn-wa"
+                          href={buildWhatsAppUrl(activeLpService.whatsappMsg)}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          <Icon name="wa" />
+                          <span>Agendar pelo WhatsApp {WA_DISPLAY}</span>
+                        </a>
+                        <a
+                          className={
+                            activeLpService.heroTheme === 'red'
+                              ? 'btn btn-dark'
+                              : 'btn btn-ghost-w'
+                          }
+                          href="#nossas-lojas"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            scrollToSection('nossas-lojas');
+                          }}
+                        >
+                          <Icon name="pin" />
+                          <span>Ver as 5 Lojas em Campinas</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Ilustração Oficial do Banner de cada Serviço */}
+                    <ServiceHeroIllustration serviceId={activeLpService.id} />
                   </div>
                 </div>
               </div>
+              <div className="strip" style={{ ['--h' as any]: '36px' }} aria-hidden="true" />
             </section>
-            <div className="strip" style={{ ['--h' as any]: '34px' }} aria-hidden="true" />
 
-            {/* SEÇÃO DE DETALHES TÉCNICOS E ENTREGÁVEIS DA LP */}
+            {/* RESUMO DIRETO DO SERVIÇO (2 COLUNAS RESPONSIVAS QUE EMPILHAM NO MOBILE) */}
             <section className="sec">
               <div className="wrap">
                 <div className="sec-head">
-                  <span className="kicker">Por que fazer em Campinas na Auto Visão</span>
+                  <span className="kicker">Segurança Total na Decisão</span>
                   <h2 className="h2">
-                    <span className="lt">Tudo o que você recebe na</span> {activeLpService.title}
+                    <span className="lt">Tudo o que auditamos na</span> {activeLpService.shortTitle}
                   </h2>
-                  <p className="lead">{activeLpService.summary}</p>
+                  <p className="lead">
+                    <strong>Para quem é indispensável:</strong> {activeLpService.idealFor}
+                  </p>
                 </div>
 
-                <div className="lists" style={{ gridTemplateColumns: '1.15fr 1fr' }}>
+                <div className="lp-two-cols">
                   <div className="box">
                     <h3>
                       <Icon name="check" /> O que é inspecionado passo a passo
@@ -723,17 +699,17 @@ export function App() {
                       ))}
                       <li>
                         <Icon name="clock" />
-                        <span>Tempo estimado de atendimento: {activeLpService.timeEstimate}</span>
+                        <span>Tempo estimado em loja: {activeLpService.timeEstimate}</span>
                       </li>
                       <li>
                         <Icon name="store" />
                         <span>
-                          Válido nas 5 lojas de Campinas (Taquaral, Centro, Ponte Preta/Abolição,
-                          Campos Elíseos e Parque Industrial)
+                          Disponível nas 5 lojas de Campinas (Taquaral, Centro, Ponte
+                          Preta/Abolição, Campos Elíseos e Amoreiras)
                         </span>
                       </li>
                     </ul>
-                    <div className="ctas" style={{ marginTop: 22 }}>
+                    <div className="ctas" style={{ marginTop: 20 }}>
                       <a
                         className="btn btn-wa"
                         style={{ width: '100%' }}
@@ -742,45 +718,84 @@ export function App() {
                         rel="noopener"
                       >
                         <Icon name="wa" />
-                        <span>Solicitar Orçamento e Horário no WhatsApp</span>
+                        <span>Agendar {activeLpService.shortTitle} no WhatsApp</span>
                       </a>
                     </div>
                   </div>
                 </div>
 
-                {/* Perguntas específicas deste serviço (se houver) */}
-                {activeLpService.faqs.length > 0 && (
-                  <div style={{ marginTop: 48 }}>
-                    <div className="sec-head">
-                      <span className="kicker">Dúvidas sobre {activeLpService.shortTitle}</span>
-                      <h3 className="h2">
-                        <span className="lt">Perguntas frequentes sobre</span> este serviço
-                      </h3>
+                {/* UPSELL DE ALTO VALOR NAS PÁGINAS DE SERVIÇO: SCANNER DE MÓDULO (KM REAL) & BATERIA EV */}
+                {activeLpService.id !== 'vistoria-km-scanner' &&
+                  activeLpService.id !== 'vistoria-bateria-eletricos' && (
+                    <div className="pj-strip" style={{ marginTop: 28, border: '2px solid var(--brand)' }}>
+                      <div>
+                        <span className="kicker" style={{ color: '#fff' }}>
+                          Recomendação dos Peritos Auto Visão
+                        </span>
+                        <h3>
+                          <span className="lt" style={{ fontWeight: 300 }}>
+                            Blindagem Eletrônica Completa:
+                          </span>{' '}
+                          Adicione o Scanner de Módulo (KM Real) ou Vistoria de Bateria EV
+                        </h3>
+                        <p>
+                          Aproveite a mesma visita para ler a quilometragem real gravada nos módulos
+                          eletrônicos (Motor, Câmbio, ABS e Airbag) ou certificar a saúde (SoH
+                          AVILOO) da bateria se o veículo for elétrico ou híbrido!
+                        </p>
+                        <div className="pj-pills">
+                          <a
+                            href="/vistoria-km-scanner"
+                            className="pj-pill"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigateToLp(
+                                VISTORIA_SERVICES.find((s) => s.id === 'vistoria-km-scanner') ||
+                                  null
+                              );
+                            }}
+                          >
+                            <Icon name="gauge" /> Conhecer Scanner de Módulo (KM Real)
+                          </a>
+                          <a
+                            href="/vistoria-bateria-eletricos"
+                            className="pj-pill"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigateToLp(
+                                VISTORIA_SERVICES.find(
+                                  (s) => s.id === 'vistoria-bateria-eletricos'
+                                ) || null
+                              );
+                            }}
+                          >
+                            <Icon name="battery" /> Conhecer Vistoria de Bateria (Elétricos/Híbridos)
+                          </a>
+                        </div>
+                      </div>
+                      <div className="ctas">
+                        <a
+                          className="btn btn-wa"
+                          href={buildWhatsAppUrl(
+                            `Olá! Quero agendar a ${activeLpService.shortTitle} e também incluir o Scanner de Módulo (KM Real) / Bateria EV.`
+                          )}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          <Icon name="wa" />
+                          <span>Incluir Scanner / Bateria EV</span>
+                        </a>
+                      </div>
                     </div>
-                    <div className="faq">
-                      {activeLpService.faqs.map((f, i) => (
-                        <details key={i} open>
-                          <summary>
-                            {f.q}
-                            <span className="pm">
-                              <Icon name="plus" />
-                            </span>
-                          </summary>
-                          <p className="ans">{f.a}</p>
-                        </details>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Outras vistorias caso o cliente queira navegar */}
-                <div style={{ marginTop: 56 }}>
-                  <div className="sec-head">
-                    <span className="kicker">Outras Vistorias em Campinas</span>
-                    <h3 className="h3">Conheça também outros serviços da Auto Visão Campinas:</h3>
+                <div style={{ marginTop: 44 }}>
+                  <div className="sec-head" style={{ marginBottom: 18 }}>
+                    <span className="kicker">Navegar entre Serviços</span>
+                    <h3 className="h3">Veja outras vistorias realizadas em Campinas:</h3>
                   </div>
                   <div className="pills">
-                    {VISTORIA_SERVICES.filter((s) => s.id !== activeLpService.id).map((s) => (
+                    {PUBLIC_MAIN_SERVICES.filter((s) => s.id !== activeLpService.id).map((s) => (
                       <a
                         key={s.id}
                         href={`/${s.slug}`}
@@ -801,10 +816,10 @@ export function App() {
           </>
         ) : (
           /* =====================================================================
-              VISÃO COMPLETA DA HOME DE CAMPINAS (QUANDO ACESSA A RAIZ "/")
+              HOME DE ALTA CONVERSÃO, COPY FORTE E LEITURA FÁCIL
              ===================================================================== */
           <>
-            {/* HERO CAROUSEL (5 BANNERS NO PADRÃO ESTRITO DO DESIGN SYSTEM) */}
+            {/* 1. HERO CAROUSEL (4 BANNERS DE ALTA PERSUASÃO) */}
             <section
               className={`hero ${heroPaused ? 'paused' : ''}`}
               id="inicio"
@@ -814,12 +829,12 @@ export function App() {
               onMouseLeave={() => setHeroPaused(false)}
             >
               <div className="slides">
-                {/* SLIDE 1: COMBO CAUTELAR + VISTORIA DO DETRAN EM CAMPINAS */}
+                {/* BANNER 1: DETRAN + CAUTELAR */}
                 <div
                   className={`slide red ${heroSlide === 0 ? 'is-on' : ''}`}
                   role="group"
                   aria-roledescription="banner"
-                  aria-label="1 de 5"
+                  aria-label="1 de 4"
                   aria-hidden={heroSlide !== 0}
                 >
                   <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
@@ -829,23 +844,14 @@ export function App() {
                     <div className="slide-copy">
                       <span className="kicker">5 Lojas Credenciadas DETRAN-SP em Campinas</span>
                       <h1 className="h-display">
-                        <span className="lt">Vistoria do DETRAN e Cautelar</span>em um só
-                        atendimento.
+                        <span className="lt">Não arrisque seu dinheiro</span>em um carro sem
+                        histórico.
                       </h1>
                       <p className="lead">
-                        Vai comprar, vender ou transferir em Campinas? Descubra todo o histórico e a
-                        estrutura do veículo e já saia com o laudo oficial de Transferência do
-                        DETRAN-SP na mesma visita.
+                        Descubra se o veículo tem leilão, sinistro, batida estrutural ou chassi
+                        adulterado antes de comprar — e já faça a Vistoria Oficial do DETRAN-SP na
+                        mesma visita!
                       </p>
-                      <div className="chips">
-                        <span className="chip">
-                          <Icon name="store" /> Taquaral · Centro · Abolição · Campos Elíseos ·
-                          Amoreiras
-                        </span>
-                        <span className="chip">
-                          <Icon name="clock" /> Plantão Sábados até 16h
-                        </span>
-                      </div>
                       <div className="ctas">
                         <a
                           className="btn btn-wa"
@@ -860,10 +866,10 @@ export function App() {
                         </a>
                         <a
                           className="btn btn-dark"
-                          href="#unidades"
+                          href="#nossas-lojas"
                           onClick={(e) => {
                             e.preventDefault();
-                            scrollToSection('unidades');
+                            scrollToSection('nossas-lojas');
                           }}
                         >
                           <Icon name="pin" />
@@ -871,187 +877,64 @@ export function App() {
                         </a>
                       </div>
                     </div>
-
-                    {/* Arte Vetorial DS: Carro de Família + Lupa + 3 Etiquetas */}
-                    <div className="art">
-                      <svg className="car" viewBox="0 0 600 270" aria-hidden="true">
-                        <use href="#car-sym" />
-                      </svg>
-                      <svg className="lens" viewBox="0 0 200 200" aria-hidden="true">
-                        <circle
-                          cx="86"
-                          cy="86"
-                          r="62"
-                          fill="rgba(255,255,255,.10)"
-                          stroke="#fff"
-                          strokeWidth="22"
-                        />
-                        <path
-                          d="M134 134l42 42"
-                          stroke="#fff"
-                          strokeWidth="26"
-                          strokeLinecap="round"
-                        />
-                        <circle cx="86" cy="86" r="16" fill="#151415" />
-                      </svg>
-                      <span className="tagc t1">
-                        <b>
-                          <Icon name="shield" />
-                        </b>
-                        <span>
-                          Vistoria DETRAN-SP<small>transferência na hora</small>
-                        </span>
-                      </span>
-                      <span className="tagc t2">
-                        <b>
-                          <Icon name="search" />
-                        </b>
-                        <span>
-                          Vistoria Cautelar<small>estrutura e leilão</small>
-                        </span>
-                      </span>
-                      <span className="tagc t3">
-                        <b>
-                          <Icon name="orbit" />
-                        </b>
-                        <span>
-                          Vistoria 360º®<small>+180 itens avaliados</small>
-                        </span>
-                      </span>
-                    </div>
+                    <ServiceHeroIllustration serviceId="vistoria-cautelar" />
                   </div>
                 </div>
 
-                {/* SLIDE 2: VISTORIA CAUTELAR COM CARTÃO DE LAUDO ILUSTRATIVO */}
+                {/* BANNER 2: SCANNER DE MÓDULO (KM REAL) + BATERIA ELÉTRICOS & HÍBRIDOS (ALTO TICKET) */}
                 <div
                   className={`slide dark ${heroSlide === 1 ? 'is-on' : ''}`}
                   role="group"
                   aria-roledescription="banner"
-                  aria-label="2 de 5"
+                  aria-label="2 de 4"
                   aria-hidden={heroSlide !== 1}
                 >
                   <div className="wrap">
                     <div className="slide-copy">
-                      <span className="kicker">Vistoria Cautelar em Campinas</span>
+                      <span className="kicker">Diagnóstico Eletrônico Exclusivo em Campinas</span>
                       <h2 className="h-display">
-                        <span className="lt">Quem você ama</span>merece um carro vistoriado.
+                        <span className="lt">Scanner de Módulo (KM Real)</span>e Saúde da Bateria
+                        EV.
                       </h2>
                       <p className="lead">
-                        Preço bom demais pode esconder leilão, sinistro grave, chassi adulterado,
-                        massa plástica ou bloqueios judiciais. Faça a Vistoria Cautelar antes de
-                        assinar ou pagar!
+                        Mais de 30% dos seminovos têm KM adulterado ou falhas apagadas no painel.
+                        Nosso scanner lê a memória oculta dos módulos (OBD-II) e o sistema AVILOO
+                        certifica a saúde real da bateria de elétricos e híbridos.
                       </p>
                       <div className="ctas">
                         <a
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(
-                            'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria Cautelar.'
+                            'Olá! Vim pelo site da Auto Visão Campinas e quero agendar a Vistoria de Scanner de Módulo (KM Real) / Bateria de Elétricos e Híbridos.'
                           )}
                           target="_blank"
                           rel="noopener"
                         >
                           <Icon name="wa" />
-                          <span>Agendar Vistoria Cautelar</span>
+                          <span>Agendar Scanner / Bateria EV</span>
                         </a>
                         <a
                           className="btn btn-ghost-w"
-                          href="/vistoria-cautelar"
+                          href="#destaque-scanner-bateria"
                           onClick={(e) => {
                             e.preventDefault();
-                            navigateToLp(
-                              VISTORIA_SERVICES.find((s) => s.id === 'vistoria-cautelar') || null
-                            );
+                            scrollToSection('destaque-scanner-bateria');
                           }}
                         >
-                          Ver página da Cautelar
+                          Ver como funciona
                         </a>
                       </div>
                     </div>
-
-                    {/* Cartão de Laudo Oficial DS */}
-                    <div className="report" aria-hidden="true">
-                      <div className="report-h">
-                        <img src="/assets/img/logo-autovisao.svg" alt="" width="120" height="28" />
-                        <span>
-                          LAUDO DE VISTORIA
-                          <br />
-                          CAUTELAR · CAMPINAS
-                        </span>
-                      </div>
-                      <div className="report-car">
-                        <span>SUV Compacto · Ilustrativo</span>
-                        <em>ABC1D23</em>
-                      </div>
-                      <ul>
-                        <li>
-                          <span>
-                            <Icon name="list" />
-                            Histórico de Leilão e Sinistro
-                          </span>
-                          <span className="ok">
-                            <Icon name="check" />
-                            Conferido
-                          </span>
-                        </li>
-                        <li>
-                          <span>
-                            <Icon name="search" />
-                            Roubo, Furto e Gravame
-                          </span>
-                          <span className="ok">
-                            <Icon name="check" />
-                            Conferido
-                          </span>
-                        </li>
-                        <li>
-                          <span>
-                            <Icon name="scan" />
-                            Chassi, Motor, Câmbio e Vidros
-                          </span>
-                          <span className="ok">
-                            <Icon name="check" />
-                            Conferido
-                          </span>
-                        </li>
-                        <li>
-                          <span>
-                            <Icon name="car" />
-                            Longarinas, Colunas e Estrutura
-                          </span>
-                          <span className="ok">
-                            <Icon name="check" />
-                            Conferido
-                          </span>
-                        </li>
-                        <li>
-                          <span>
-                            <Icon name="paint" />
-                            Pintura e Massa Plástica
-                          </span>
-                          <span className="ok">
-                            <Icon name="check" />
-                            Conferido
-                          </span>
-                        </li>
-                      </ul>
-                      <div className="report-f">
-                        <Icon name="file" /> Laudo na hora com fotos e checklist · Placa ilustrativa
-                      </div>
-                      <span className="stamp">
-                        Seu carro
-                        <br />
-                        em boas mãos
-                      </span>
-                    </div>
+                    <ServiceHeroIllustration serviceId="vistoria-km-scanner" />
                   </div>
                 </div>
 
-                {/* SLIDE 3: NOSSA VISTORIA 360º® */}
+                {/* BANNER 3: NOSSA VISTORIA 360º® (+180 ITENS + PINTURA PEÇA A PEÇA) */}
                 <div
                   className={`slide red ${heroSlide === 2 ? 'is-on' : ''}`}
                   role="group"
                   aria-roledescription="banner"
-                  aria-label="3 de 5"
+                  aria-label="3 de 4"
                   aria-hidden={heroSlide !== 2}
                 >
                   <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
@@ -1061,13 +944,13 @@ export function App() {
                     <div className="slide-copy">
                       <span className="kicker">Exclusiva Auto Visão®</span>
                       <h2 className="h-display">
-                        <span className="lt">Nossa Vistoria 360º®:</span>mais de 180 itens no mesmo
-                        laudo.
+                        <span className="lt">Nossa Vistoria 360º®:</span>mais de 180 itens passados
+                        a limpo.
                       </h2>
                       <p className="lead">
-                        Estrutura, pintura medida peça a peça, chassi e histórico completo. Conheça
-                        também a 360º® Plus (com vídeo no WhatsApp) e a 360º® Max (com scanner de
-                        módulos e Certificado do Carro).
+                        A blindagem definitiva para quem compra ou vende: estrutura, pintura peça a
+                        peça em µm, vídeo no WhatsApp (Plus) e scanner de módulos com Certificado
+                        do Carro (Max).
                       </p>
                       <div className="ctas">
                         <a
@@ -1091,280 +974,57 @@ export function App() {
                             );
                           }}
                         >
-                          <span>Ver 360º® · Plus · Max</span>
+                          Conhecer a 360º®
                         </a>
                       </div>
                     </div>
-
-                    <div className="art vid-art" aria-hidden="true">
-                      <div className="phone">
-                        <div className="phone-scr">
-                          <div className="phone-top">
-                            <span className="rec" />
-                            REC · 02:14 · VISTORIA 360º® PLUS
-                          </div>
-                          <div className="phone-car">
-                            <svg className="car" viewBox="0 0 600 270" aria-hidden="true">
-                              <use href="#car-sym" />
-                            </svg>
-                            <span className="play">
-                              <Icon name="chev" />
-                            </span>
-                          </div>
-                          <div className="phone-bar">
-                            <span />
-                          </div>
-                          <div className="phone-chips">
-                            <span>
-                              <Icon name="check" />
-                              +180 itens
-                            </span>
-                            <span>
-                              <Icon name="check" />
-                              Pintura µm
-                            </span>
-                            <span>
-                              <Icon name="check" />
-                              Scanner KM
-                            </span>
-                          </div>
-                          <div className="phone-msg">
-                            <Icon name="wa" />
-                            Enviado pelo WhatsApp
-                          </div>
-                        </div>
-                      </div>
-                      <span className="tagc t1">
-                        <b>
-                          <Icon name="paint" />
-                        </b>
-                        <span>
-                          Pintura Peça a Peça<small>mapa em micrômetros</small>
-                        </span>
-                      </span>
-                      <span className="tagc t3">
-                        <b>
-                          <Icon name="scan" />
-                        </b>
-                        <span>
-                          Certificado do Carro<small>exclusivo na 360º® Max</small>
-                        </span>
-                      </span>
-                    </div>
+                    <ServiceHeroIllustration serviceId="vistoria-360" />
                   </div>
                 </div>
 
-                {/* SLIDE 4: NOVAS TECNOLOGIAS: SCANNER KM + BATERIA ELÉTRICOS/HÍBRIDOS + PREMIUM */}
+                {/* BANNER 4: PESADOS + EMPRESAS + PÁTIO */}
                 <div
                   className={`slide dark ${heroSlide === 3 ? 'is-on' : ''}`}
                   role="group"
                   aria-roledescription="banner"
-                  aria-label="4 de 5"
+                  aria-label="4 de 4"
                   aria-hidden={heroSlide !== 3}
                 >
                   <div className="wrap">
                     <div className="slide-copy">
-                      <span className="kicker">Diagnóstico de Nova Geração</span>
+                      <span className="kicker">Caminhões, Regularização e Soluções PJ</span>
                       <h2 className="h-display">
-                        <span className="lt">Scanner de KM, Bateria EV</span>e Vistoria Premium.
+                        <span className="lt">Veículos Pesados, Pátio,</span>Infração e Atendimento
+                        Empresas.
                       </h2>
                       <p className="lead">
-                        Auditamos a quilometragem real gravada nos módulos eletrônicos via OBD-II,
-                        emitimos Certificado Independente AVILOO para baterias de carros elétricos e
-                        híbridos e fazemos análise mecânica completa para veículos acima de R$ 200
-                        mil.
+                        Laudo oficial na hora para caminhões, baixa de bloqueio por infração,
+                        liberação de pátio público e convênios corporativos (Seguradora, Financeira
+                        e Proteção Veicular).
                       </p>
                       <div className="ctas">
                         <a
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(
-                            'Olá! Vim pelo site da Auto Visão Campinas e quero agendar diagnóstico de Scanner de KM / Bateria Elétricos / Vistoria Premium.'
+                            'Olá! Vim pelo site da Auto Visão Campinas e quero informações sobre vistoria.'
                           )}
                           target="_blank"
                           rel="noopener"
                         >
                           <Icon name="wa" />
-                          <span>Falar com Especialista</span>
-                        </a>
-                        <a
-                          className="btn btn-ghost-w"
-                          href="/vistoria-bateria-eletricos"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            navigateToLp(
-                              VISTORIA_SERVICES.find(
-                                (s) => s.id === 'vistoria-bateria-eletricos'
-                              ) || null
-                            );
-                          }}
-                        >
-                          Ver Vistoria de Elétricos
+                          <span>Falar no WhatsApp {WA_DISPLAY}</span>
                         </a>
                       </div>
                     </div>
-
-                    <div className="kmc" aria-hidden="true">
-                      <div className="kmc-h">
-                        <Icon name="gauge" />
-                        <span>AUDITORIA ELETRÔNICA OBD-II + BATERIA EV</span>
-                      </div>
-                      <div className="kmc-row">
-                        <span>KM lido no módulo de Motor (ECU)</span>
-                        <b>48.213 km</b>
-                      </div>
-                      <div className="kmc-row">
-                        <span>KM lido no módulo de Câmbio / ABS</span>
-                        <b>48.213 km</b>
-                      </div>
-                      <div className="kmc-row">
-                        <span>Saúde da Bateria Elétrica (AVILOO)</span>
-                        <b style={{ color: '#18743B' }}>Certificada</b>
-                      </div>
-                      <div className="kmc-ok">
-                        <Icon name="check" />
-                        <span>Quilometragem e Módulos Conferidos · Sem Fraude</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SLIDE 5: MAPA DAS 5 UNIDADES EM CAMPINAS */}
-                <div
-                  className={`slide red ${heroSlide === 4 ? 'is-on' : ''}`}
-                  role="group"
-                  aria-roledescription="banner"
-                  aria-label="5 de 5"
-                  aria-hidden={heroSlide !== 4}
-                >
-                  <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
-                    <use href="#rings" />
-                  </svg>
-                  <div className="wrap">
-                    <div className="slide-copy">
-                      <span className="kicker">5 Unidades em Campinas/SP</span>
-                      <h2 className="h-display">
-                        <span className="lt">Nascida em Campinas.</span>Sempre perto de você.
-                      </h2>
-                      <p className="lead">
-                        Atendimento rápido no Taquaral, Centro (Castelo), Ponte Preta (Abolição —
-                        Plantão aos sábados até 16h), Campos Elíseos e Parque Industrial
-                        (Amoreiras).
-                      </p>
-                      <div className="ctas">
-                        <a
-                          className="btn btn-dark"
-                          href="#unidades"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            scrollToSection('unidades');
-                          }}
-                        >
-                          <Icon name="pin" />
-                          <span>Escolher Unidade em Campinas</span>
-                        </a>
-                        <a
-                          className="btn btn-wa"
-                          href={buildWhatsAppUrl(
-                            'Olá! Vim pelo site da Auto Visão Campinas e gostaria de saber qual unidade fica mais perto de mim.'
-                          )}
-                          target="_blank"
-                          rel="noopener"
-                        >
-                          <Icon name="wa" />
-                          <span>Chamar no WhatsApp</span>
-                        </a>
-                      </div>
-                    </div>
-
-                    <div className="art map-art">
-                      <svg className="cmap" viewBox="0 0 600 480" aria-hidden="true">
-                        <defs>
-                          <clipPath id="mclip-camp">
-                            <rect width="600" height="480" rx="28" />
-                          </clipPath>
-                        </defs>
-                        <g clipPath="url(#mclip-camp)">
-                          <rect width="600" height="480" fill="#fff" />
-                          <g stroke="#F1EEF0" strokeWidth="6" fill="none">
-                            <path d="M-10 60 610 20M-10 130 610 100M-10 200 610 180M-10 280 610 250M-10 350 610 330M-10 430 610 410" />
-                            <path d="M60-10 30 490M140-10 120 490M220-10 210 490M320-10 330 490M410-10 430 490M500-10 520 490" />
-                          </g>
-                          <ellipse cx="490" cy="80" rx="62" ry="36" fill="#EAF2F7" />
-                          <path
-                            d="M70 330c30-20 70-14 84 8s-6 50-40 52-70-36-44-60z"
-                            fill="#EEF5EE"
-                          />
-                          <g stroke="#E4DFE2" strokeWidth="16" fill="none" strokeLinecap="round">
-                            <path d="M-20 240C120 220 220 230 300 214S470 150 620 120" />
-                            <path d="M300 214C320 270 360 300 386 318S460 400 480 500" />
-                            <path d="M300 214C260 280 250 340 236 388S220 470 200 500" />
-                          </g>
-                          <path
-                            d="M-20 420C80 360 110 300 142 262S190 120 240-20"
-                            stroke="#151415"
-                            strokeWidth="12"
-                            fill="none"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M-20 420C80 360 110 300 142 262S190 120 240-20"
-                            stroke="#fff"
-                            strokeWidth="2"
-                            strokeDasharray="12 12"
-                            fill="none"
-                          />
-                          <path
-                            className="mroute"
-                            d="M222 132C250 150 280 170 296 196"
-                            stroke="#ED3237"
-                            strokeWidth="4"
-                            strokeDasharray="2 9"
-                            strokeLinecap="round"
-                            fill="none"
-                          />
-                        </g>
-                        {[
-                          { label: 'Taquaral', x: 448, y: 112 },
-                          { label: 'Centro', x: 300, y: 214 },
-                          { label: 'Ponte Preta', x: 416, y: 288 },
-                          { label: 'Campos Elíseos', x: 142, y: 262 },
-                          { label: 'Pq. Industrial', x: 256, y: 396 },
-                        ].map((p) => (
-                          <g key={p.label} transform={`translate(${p.x} ${p.y})`}>
-                            <ellipse cx="0" cy="2" rx="10" ry="4" fill="#000" opacity=".18" />
-                            <path
-                              d="M0 0C-4-8-18-19-18-32a18 18 0 0 1 36 0C18-19 4-8 0 0z"
-                              fill="#ED3237"
-                            />
-                            <circle cy="-32" r="9" fill="none" stroke="#fff" strokeWidth="4" />
-                            <circle cy="-32" r="3.2" fill="#151415" />
-                            <g transform="translate(-54 8)">
-                              <rect width="108" height="24" rx="12" fill="#151415" />
-                              <text
-                                x="54"
-                                y="16.5"
-                                textAnchor="middle"
-                                fill="#fff"
-                                fontFamily="Nunito,sans-serif"
-                                fontWeight="800"
-                                fontSize="12"
-                              >
-                                {p.label}
-                              </text>
-                            </g>
-                          </g>
-                        ))}
-                      </svg>
-                    </div>
+                    <ServiceHeroIllustration serviceId="vistoria-pesados" />
                   </div>
                 </div>
               </div>
 
-              {/* Controles do Carrossel */}
               <div className="hero-ctrl">
                 <div className="wrap">
                   <div className="dots" role="group" aria-label="Escolher banner">
-                    {[0, 1, 2, 3, 4].map((idx) => (
+                    {[0, 1, 2, 3].map((idx) => (
                       <button
                         key={idx}
                         className="dot"
@@ -1378,14 +1038,14 @@ export function App() {
                     <button
                       className="arw"
                       aria-label="Banner anterior"
-                      onClick={() => setHeroSlide((s) => (s - 1 + 5) % 5)}
+                      onClick={() => setHeroSlide((s) => (s - 1 + 4) % 4)}
                     >
                       <Icon name="arrowl" />
                     </button>
                     <button
                       className="arw"
                       aria-label="Próximo banner"
-                      onClick={() => setHeroSlide((s) => (s + 1) % 5)}
+                      onClick={() => setHeroSlide((s) => (s + 1) % 4)}
                     >
                       <Icon name="arrow" />
                     </button>
@@ -1396,7 +1056,7 @@ export function App() {
               <div className="strip" style={{ ['--h' as any]: '40px' }} aria-hidden="true" />
             </section>
 
-            {/* FAIXA DE CONFIANÇA */}
+            {/* 2. FAIXA DE CONFIANÇA */}
             <section className="trust" aria-label="Por que escolher a Auto Visão em Campinas">
               <div className="wrap">
                 <ul>
@@ -1423,8 +1083,8 @@ export function App() {
                       <Icon name="orbit" />
                     </span>
                     <div>
-                      <strong>13 tipos de vistoria</strong>
-                      <span>Do DETRAN e Cautelar à 360º®, EV e Pesados</span>
+                      <strong>Vistoria 360º® Exclusiva</strong>
+                      <span>+180 itens · Pintura · Scanner · Vídeo</span>
                     </div>
                   </li>
                   <li>
@@ -1440,19 +1100,18 @@ export function App() {
               </div>
             </section>
 
-            {/* DESTAQUE DUPLO: VISTORIA DO DETRAN & VISTORIA CAUTELAR */}
+            {/* 3. DESTAQUE DUPLO: VISTORIA DO DETRAN & VISTORIA CAUTELAR (COPY DE ALTA CONVERSÃO) */}
             <section className="sec" id="destaques">
               <div className="wrap">
                 <div className="sec-head center">
-                  <span className="kicker">Os Carros-Chefes em Campinas</span>
+                  <span className="kicker">Proteja Seu Bolso e Sua Família</span>
                   <h2 className="h2">
                     <span className="lt">Destaque para a</span> Vistoria do DETRAN e Vistoria
                     Cautelar
                   </h2>
                   <p className="lead">
-                    Seja para transferir o documento com rapidez junto ao DETRAN-SP ou para blindar
-                    o seu bolso antes de fechar negócio em um usado, você conta com a rede que
-                    nasceu em Campinas e é referência nacional.
+                    Um carro bonito por fora pode esconder um prejuízo de R$ 30 mil por baixo da
+                    lataria. Resolva sua transferência oficial ou blinde sua compra em 30 minutos.
                   </p>
                 </div>
 
@@ -1460,46 +1119,38 @@ export function App() {
                   {/* CARD 1: VISTORIA DO DETRAN */}
                   <article className="flagship-card detran">
                     <div>
-                      <span className="kicker" style={{ color: '#ED3237' }}>
-                        OBRIGATÓRIA NA TRANSFERÊNCIA · ECV CREDENCIADA
-                      </span>
+                      <span className="kicker">OBRIGATÓRIA NA TRANSFERÊNCIA · ECV OFICIAL</span>
                       <h3 style={{ marginTop: 12 }}>
                         <span className="lt">Vistoria do DETRAN</span>
-                        Transferência e Regularização
+                        Transferência sem fila e na hora
                       </h3>
                       <p style={{ marginTop: 12 }}>
-                        Comprou um veículo, vai mudar de município ou precisa de segunda via do CRV?
-                        Nossas 5 unidades em Campinas são credenciadas oficialmente pelo DETRAN-SP
-                        para emitir seu laudo de transferência na hora.
+                        Precisa passar o veículo para o seu nome, mudar de município ou tirar
+                        segunda via? Emitimos o laudo oficial ECV homologado direto no sistema
+                        e-CRVsp do DETRAN-SP em qualquer uma das nossas 5 lojas de Campinas.
                       </p>
-                      <ul className="flagship-list" style={{ marginTop: 18 }}>
+                      <ul className="flagship-list" style={{ marginTop: 16 }}>
                         <li>
                           <span className="ok-dot">
                             <Icon name="check" />
                           </span>
-                          <span>
-                            Coleta óptica homologada de chassi, motor e placa Mercosul (QR Code)
-                          </span>
+                          <span>Coleta óptica oficial de chassi, motor e placa Mercosul</span>
                         </li>
                         <li>
                           <span className="ok-dot">
                             <Icon name="check" />
                           </span>
-                          <span>
-                            Conferência de todos os equipamentos obrigatórios exigidos pelo CONTRAN
-                          </span>
+                          <span>Checagem completa dos itens exigidos pelo CONTRAN</span>
                         </li>
                         <li>
                           <span className="ok-dot">
                             <Icon name="check" />
                           </span>
-                          <span>
-                            Transmissão imediata para o sistema e-CRVsp do DETRAN-SP (20 a 30 min)
-                          </span>
+                          <span>Laudo pronto na hora (20 a 30 minutos)</span>
                         </li>
                       </ul>
                     </div>
-                    <div className="ctas" style={{ marginTop: 10 }}>
+                    <div className="ctas" style={{ marginTop: 8 }}>
                       <a
                         className="btn btn-wa"
                         href={buildWhatsAppUrl(
@@ -1509,7 +1160,7 @@ export function App() {
                         rel="noopener"
                       >
                         <Icon name="wa" />
-                        <span>Agendar Vistoria do DETRAN</span>
+                        <span>Agendar Vistoria DETRAN</span>
                       </a>
                       <a
                         className="btn btn-ghost-w"
@@ -1521,7 +1172,7 @@ export function App() {
                           );
                         }}
                       >
-                        Abrir LP exclusiva
+                        Ver página exclusiva
                       </a>
                     </div>
                   </article>
@@ -1535,45 +1186,37 @@ export function App() {
                       <span className="kicker">PROTEÇÃO TOTAL ANTES DE COMPRAR OU VENDER</span>
                       <h3 style={{ marginTop: 12 }}>
                         <span className="lt">Vistoria Cautelar</span>
-                        Estrutura, Identificação e Histórico
+                        Não compre um problema escondido
                       </h3>
                       <p style={{ marginTop: 12 }}>
-                        Não compre no escuro! Avaliamos toda a estrutura do veículo para garantir
-                        que ele nunca sofreu colisão grave ou adulteração, além de levantar todo o
-                        passado em bases oficiais e privadas.
+                        Antes de assinar o contrato ou fazer o PIX, saiba a verdade: verificamos se
+                        a estrutura já sofreu batida grave, se o chassi ou motor foram adulterados e
+                        se consta leilão, sinistro, roubo ou bloqueio judicial.
                       </p>
-                      <ul className="flagship-list" style={{ marginTop: 18 }}>
+                      <ul className="flagship-list" style={{ marginTop: 16 }}>
                         <li>
                           <span className="ok-dot">
                             <Icon name="check" />
                           </span>
-                          <span>
-                            Estrutura: longarinas, colunas, painel frontal/traseiro, teto e assoalho
-                          </span>
+                          <span>Estrutura: longarinas, colunas, teto, caixas de ar e soldas</span>
                         </li>
                         <li>
                           <span className="ok-dot">
                             <Icon name="check" />
                           </span>
-                          <span>
-                            Histórico completo: passagem por leilão, indício de sinistro, roubo e
-                            furto
-                          </span>
+                          <span>Passado completo: leilão, sinistro, roubo/furto e débitos</span>
                         </li>
                         <li>
                           <span className="ok-dot">
                             <Icon name="check" />
                           </span>
-                          <span>
-                            Originalidade de chassi, motor, câmbio, vidros e etiquetas de fábrica
-                            (ETA)
-                          </span>
+                          <span>Autenticidade de chassi, motor, câmbio, vidros e etiquetas</span>
                         </li>
                       </ul>
                     </div>
                     <div
                       className="ctas"
-                      style={{ position: 'relative', zIndex: 1, marginTop: 10 }}
+                      style={{ position: 'relative', zIndex: 1, marginTop: 8 }}
                     >
                       <a
                         className="btn btn-dark"
@@ -1596,138 +1239,210 @@ export function App() {
                           );
                         }}
                       >
-                        Abrir LP exclusiva
+                        Ver página exclusiva
                       </a>
                     </div>
                   </article>
                 </div>
-
-                {/* Banner Combo Cautelar + Transferência */}
-                <div className="promo" style={{ marginTop: 28 }}>
-                  <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
-                    <use href="#rings" />
-                  </svg>
-                  <div>
-                    <span className="kicker">Combo Inteligente Campinas</span>
-                    <h3 className="h2" style={{ fontSize: 'clamp(24px, 3vw, 32px)' }}>
-                      <span className="lt">Vai comprar e já transferir?</span> Faça Cautelar +
-                      Transferência DETRAN no mesmo atendimento!
-                    </h3>
-                    <p>
-                      Economize tempo e dinheiro: valide a estrutura e a procedência do carro antes
-                      de pagar e já saia com o laudo oficial do DETRAN-SP pronto para a
-                      transferência.
-                    </p>
-                  </div>
-                  <div className="ctas">
-                    <a
-                      className="btn btn-wa"
-                      href={buildWhatsAppUrl(
-                        'Olá! Vim pelo site da Auto Visão Campinas e quero solicitar o Combo Cautelar + Transferência DETRAN.'
-                      )}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      <Icon name="wa" />
-                      <span>Solicitar Combo no WhatsApp</span>
-                    </a>
-                  </div>
-                </div>
               </div>
             </section>
 
-            {/* SHOWREEL INTERATIVO EM REMOTION */}
-            <section className="sec dark" id="remotion-tour">
-              <div className="wrap remotion-wrap">
-                <div className="sec-head" style={{ marginBottom: 8 }}>
-                  <span className="kicker" style={{ color: '#ED3237' }}>
-                    Showreel Interativo · Powered by Remotion
+            {/* 3B. SUPER DESTAQUE DE ALTO VALOR: SCANNER DE MÓDULO (KM REAL) & VISTORIA DE BATERIA (ELÉTRICOS E HÍBRIDOS) */}
+            <section className="sec dark" id="destaque-scanner-bateria">
+              <div className="wrap">
+                <div className="sec-head center">
+                  <span className="kicker" style={{ color: '#fff' }}>
+                    Tecnologia Exclusiva de Diagnóstico Profundo
                   </span>
                   <h2 className="h2">
-                    <span className="lt">Veja em movimento como a</span> Auto Visão protege o seu
-                    patrimônio
+                    <span className="lt">O que ninguém vê no olho:</span> Scanner de Módulo (KM
+                    Real) e Saúde da Bateria EV
                   </h2>
                   <p className="lead">
-                    Navegue pelas cenas abaixo ou assista à apresentação animada em tempo real de
-                    todas as tecnologias das nossas unidades de Campinas.
+                    Mais de 30% dos veículos seminovos têm quilometragem adulterada no painel ou
+                    falhas eletrônicas apagadas antes da venda — e em elétricos/híbridos, uma
+                    bateria degradada pode custar mais de R$ 80 mil. Proteja seu investimento antes
+                    de fechar negócio!
                   </p>
                 </div>
 
-                <div className="remotion-nav" role="group" aria-label="Escolher cena da animação">
-                  {[
-                    { idx: null, label: '▶ Reproduzir Tudo (Auto)' },
-                    { idx: 0, label: '1. DETRAN & Cautelar' },
-                    { idx: 1, label: '2. Vistoria 360º® & Pintura' },
-                    { idx: 2, label: '3. Scanner KM & Bateria EV' },
-                    { idx: 3, label: '4. Pesados, Empresas & Pátio' },
-                    { idx: 4, label: '5. Mapa das 5 Lojas Campinas' },
-                  ].map((btn) => (
-                    <button
-                      key={String(btn.idx)}
-                      type="button"
-                      className={`remotion-pill ${remotionScene === btn.idx ? 'active' : ''}`}
-                      onClick={() => setRemotionScene(btn.idx)}
+                <div className="flagship-grid">
+                  {/* DESTAQUE 1: VISTORIA DE KM COM SCANNER DE MÓDULO */}
+                  <article className="flagship-card cautelar">
+                    <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
+                      <use href="#rings" />
+                    </svg>
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                      <span className="kicker">ANTI-FRAUDE DE HODÔMETRO · LEITURA OBD-II</span>
+                      <h3 style={{ marginTop: 12 }}>
+                        <span className="lt">Vistoria de KM com</span>
+                        Scanner de Módulo Eletrônico
+                      </h3>
+                      <p style={{ marginTop: 12 }}>
+                        Adulterar o número que aparece no painel é fácil para golpistas — mas a
+                        quilometragem verdadeira continua gravada nos módulos internos do carro.
+                        Nosso scanner profissional lê todas as centrais e entrega a prova técnica!
+                      </p>
+                      <ul className="flagship-list" style={{ marginTop: 16 }}>
+                        <li>
+                          <span className="ok-dot">
+                            <Icon name="check" />
+                          </span>
+                          <span>
+                            Compara o KM do painel com a memória dos módulos de Motor (ECU), Câmbio
+                            (TCU), ABS e Airbag
+                          </span>
+                        </li>
+                        <li>
+                          <span className="ok-dot">
+                            <Icon name="check" />
+                          </span>
+                          <span>
+                            Descobre códigos de falha (DTC) graves que foram apagados para esconder
+                            defeitos no test-drive
+                          </span>
+                        </li>
+                        <li>
+                          <span className="ok-dot">
+                            <Icon name="check" />
+                          </span>
+                          <span>
+                            Pode ser contratada avulsa ou somada à sua Vistoria Cautelar / 360º®
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      className="ctas"
+                      style={{ position: 'relative', zIndex: 1, marginTop: 8 }}
                     >
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
+                      <a
+                        className="btn btn-wa"
+                        href={buildWhatsAppUrl(
+                          'Olá! Vim pelo site da Auto Visão Campinas e quero agendar a Vistoria de KM com Scanner de Módulo.'
+                        )}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        <Icon name="wa" />
+                        <span>Agendar Scanner de Módulo</span>
+                      </a>
+                      <a
+                        className="btn btn-dark"
+                        href="/vistoria-km-scanner"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToLp(
+                            VISTORIA_SERVICES.find((s) => s.id === 'vistoria-km-scanner') || null
+                          );
+                        }}
+                      >
+                        Ver detalhes do Scanner
+                      </a>
+                    </div>
+                  </article>
 
-                <div className="remotion-stage">
-                  <Player
-                    component={AutoVisaoShowreel}
-                    inputProps={{ activeSceneOverride: remotionScene }}
-                    durationInFrames={450}
-                    compositionWidth={1120}
-                    compositionHeight={540}
-                    fps={30}
-                    style={{ width: '100%', height: 'auto', aspectRatio: '1120 / 540' }}
-                    controls
-                    loop
-                    autoPlay
-                  />
+                  {/* DESTAQUE 2: VISTORIA DE BATERIA PARA ELÉTRICOS E HÍBRIDOS */}
+                  <article
+                    className="flagship-card detran"
+                    style={{ border: '2px solid #25D366' }}
+                  >
+                    <div>
+                      <span className="kicker">
+                        CERTIFICAÇÃO INTERNACIONAL INDEPENDENTE AVILOO
+                      </span>
+                      <h3 style={{ marginTop: 12 }}>
+                        <span className="lt">Vistoria de Bateria para</span>
+                        Veículos Elétricos e Híbridos
+                      </h3>
+                      <p style={{ marginTop: 12 }}>
+                        A bateria de alta tensão vale até 50% do preço de um carro elétrico ou
+                        híbrido (BYD, GWM, Volvo, Toyota, BMW, Porsche). Emitimos o Certificado
+                        Independente AVILOO que comprova a saúde real (SoH) da bateria!
+                      </p>
+                      <ul className="flagship-list" style={{ marginTop: 16 }}>
+                        <li>
+                          <span className="ok-dot">
+                            <Icon name="check" />
+                          </span>
+                          <span>
+                            Medição oficial do Estado de Saúde (SoH) real das células e autonomia
+                            da bateria de tração
+                          </span>
+                        </li>
+                        <li>
+                          <span className="ok-dot">
+                            <Icon name="check" />
+                          </span>
+                          <span>
+                            Inspeção física inferior do cofre da bateria contra pancadas de solo,
+                            amassados e infiltrações
+                          </span>
+                        </li>
+                        <li>
+                          <span className="ok-dot">
+                            <Icon name="check" />
+                          </span>
+                          <span>
+                            Valoriza o elétrico na hora da venda e protege quem está comprando
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="ctas" style={{ marginTop: 8 }}>
+                      <a
+                        className="btn btn-wa"
+                        href={buildWhatsAppUrl(
+                          'Olá! Vim pelo site da Auto Visão Campinas e quero agendar a Vistoria de Bateria para Veículo Elétrico / Híbrido (Certificado AVILOO).'
+                        )}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        <Icon name="wa" />
+                        <span>Agendar Vistoria de Bateria EV</span>
+                      </a>
+                      <a
+                        className="btn btn-ghost-w"
+                        href="/vistoria-bateria-eletricos"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToLp(
+                            VISTORIA_SERVICES.find(
+                              (s) => s.id === 'vistoria-bateria-eletricos'
+                            ) || null
+                          );
+                        }}
+                      >
+                        Ver detalhes Bateria EV
+                      </a>
+                    </div>
+                  </article>
                 </div>
               </div>
             </section>
 
-            {/* CATÁLOGO COMPLETO COM TODAS AS 13 VISTORIAS OFERECIDAS HOJE */}
-            <section className="sec alt" id="servicos">
+            {/* 4. NOSSOS SERVIÇOS (SITELINK #nossos-servicos — DIRETO, SIMPLES E PERSUASIVO) */}
+            <section className="sec alt" id="nossos-servicos">
               <div className="wrap">
                 <div className="sec-head">
-                  <span className="kicker">Portfólio Completo em Campinas</span>
+                  <span className="kicker">Nossos Serviços em Campinas</span>
                   <h2 className="h2">
-                    <span className="lt">Muito além do básico:</span> todos os tipos de vistoria
-                    para você e sua empresa
+                    <span className="lt">A vistoria certa para</span> cada momento do seu veículo
                   </h2>
                   <p className="lead">
-                    Cada serviço abaixo possui sua própria Landing Page dedicada para facilitar sua
-                    leitura ou campanha. Clique em qualquer vistoria para abrir a página exclusiva.
+                    Clique em qualquer serviço abaixo para abrir a página com banner ilustrativo ou
+                    agendar direto pelo WhatsApp <strong>{WA_DISPLAY}</strong>.
                   </p>
                 </div>
 
-                <div className="tldr">
-                  <b>Resumo rápido dos 13 serviços em Campinas:</b> Fazemos{' '}
-                  <b>Vistoria do DETRAN (Transferência)</b>, <b>Vistoria Cautelar</b>,{' '}
-                  <b>Nossa Vistoria 360º® (+180 itens, Plus e Max)</b>, <b>Vistoria de Pintura</b>,{' '}
-                  <b>Vistoria de KM com Scanner de Módulo</b>,{' '}
-                  <b>
-                    Vistoria de Bateria para Veículos Elétricos e Híbridos (Certificado AVILOO)
-                  </b>
-                  , <b>Vistoria em Veículos Pesados</b>, <b>Vistoria para Financeira</b>,{' '}
-                  <b>Seguradora (Prévia)</b>, <b>Proteção Automotiva</b>,{' '}
-                  <b>Vistoria em Pátio Público</b>, <b>Vistoria de Infração de Trânsito</b> e{' '}
-                  <b>Vistoria Premium (acima de R$ 200 mil)</b>.
-                </div>
-
+                {/* Filtros simples para o cliente */}
                 <div className="tabs" role="group" aria-label="Filtrar serviços de vistoria">
                   {[
-                    { id: 'all', label: `Todas as Vistorias (${VISTORIA_SERVICES.length})` },
-                    { id: 'destaque', label: 'Mais Procuradas' },
-                    { id: 'comprar', label: 'Comprar ou Vender' },
-                    { id: 'transferir', label: 'DETRAN, Pátio e Infração' },
-                    { id: 'avancada', label: 'Pintura, Scanner, Elétricos e Premium' },
+                    { id: 'all', label: 'Todas as Vistorias' },
+                    { id: 'comprar', label: 'Comprar ou Vender com Segurança' },
+                    { id: 'transferir', label: 'DETRAN, Infração e Pátio Público' },
+                    { id: 'avancada', label: '360º®, Pintura, Scanner KM, Elétricos e Premium' },
                     { id: 'pesados', label: 'Caminhões e Pesados' },
-                    { id: 'empresas', label: 'Financeira, Seguradora e Proteção' },
                   ].map((t) => (
                     <button
                       key={t.id}
@@ -1764,10 +1479,10 @@ export function App() {
                           {svc.badge}
                         </span>
                       </div>
-                      <h3>{svc.title}</h3>
+                      <h3>{svc.shortTitle}</h3>
                       <p>{svc.summary}</p>
                       <ul>
-                        {svc.checklist.slice(0, 3).map((item, idx) => (
+                        {svc.checklist.slice(0, 2).map((item, idx) => (
                           <li key={idx}>
                             <Icon name="check" />
                             <span>{item}</span>
@@ -1805,333 +1520,110 @@ export function App() {
                             navigateToLp(svc);
                           }}
                         >
-                          <span>Abrir página do serviço</span>
+                          <span>Ver detalhes</span>
                           <Icon name="arrow" />
                         </a>
                       </div>
                     </article>
                   ))}
-
-                  <div className="sv-help full">
-                    <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
-                      <use href="#rings" />
-                    </svg>
-                    <div>
-                      <span className="kicker">Ainda em dúvida sobre qual escolher?</span>
-                      <h3 className="h3">
-                        Use nosso recomendador em 2 cliques ou fale direto com a central de
-                        Campinas.
-                      </h3>
-                    </div>
-                    <div className="ctas">
-                      <a
-                        className="btn btn-white"
-                        href="#qual-vistoria"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          scrollToSection('qual-vistoria');
-                        }}
-                      >
-                        Descobrir minha vistoria ideal
-                      </a>
-                      <a
-                        className="btn btn-ghost-w"
-                        href={buildWhatsAppUrl(
-                          'Olá! Vim pelo site da Auto Visão Campinas e gostaria de ajuda para escolher a vistoria certa para o meu caso.'
-                        )}
-                        target="_blank"
-                        rel="noopener"
-                      >
-                        <Icon name="wa" />
-                        <span>Falar com Consultor</span>
-                      </a>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            </section>
 
-            {/* SPOTLIGHT EXCLUSIVO: NOSSA VISTORIA 360º® */}
-            <section className="sec dark x360" id="vistoria-360-destaque">
-              <div className="wrap x360-g">
-                <div className="x360-copy">
-                  <span className="kicker">Exclusiva Auto Visão®</span>
-                  <h2 className="h2">
-                    <span className="lt">Nossa Vistoria 360º®:</span> o carro visto por inteiro.
-                  </h2>
-                  <p className="lead">
-                    A Vistoria 360º® é a perícia mais completa da rede Auto Visão. São mais de 180
-                    aspectos avaliados em um único atendimento: estrutura, pintura peça a peça em
-                    micrômetros, chassi, motor e histórico completo.
-                  </p>
-                  <div className="ctas">
-                    <a
-                      className="btn btn-wa"
-                      href={buildWhatsAppUrl(
-                        'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar a Nossa Vistoria 360º®.'
-                      )}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      <Icon name="wa" />
-                      <span>Agendar a Vistoria 360º®</span>
-                    </a>
-                    <a
-                      className="btn btn-ghost-w"
-                      href="/vistoria-360"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigateToLp(
-                          VISTORIA_SERVICES.find((s) => s.id === 'vistoria-360') || null
-                        );
-                      }}
-                    >
-                      Abrir LP da Vistoria 360º®
-                    </a>
-                  </div>
-
-                  <div className="seal-row">
-                    {[
-                      { label: '360º® (+180 itens)', sub: 'CERTIFICADA', bg: '#ED3237' },
-                      { label: '360º® Plus (+ Vídeo)', sub: 'PLUS', bg: '#151415' },
-                      { label: '360º® Max (+ Scanner)', sub: 'MAX', bg: '#151415' },
-                    ].map((s, i) => (
+                {/* Bloco Simplificado para Empresas (PJs): Seguradora, Financeira e Proteção Veicular */}
+                <div className="pj-strip">
+                  <div>
+                    <span className="kicker">Soluções Corporativas (Exclusivo PJ)</span>
+                    <h3>
+                      <span className="lt" style={{ fontWeight: 300 }}>
+                        Atendimento para Empresas:
+                      </span>{' '}
+                      Seguradora, Financeira, Proteção Veicular e Frotas
+                    </h3>
+                    <p>
+                      Representa uma seguradora, corretora, financeira, administradora de consórcio
+                      ou associação de proteção automotiva? Temos fluxo corporativo rápido nas 5
+                      unidades de Campinas.
+                    </p>
+                    <div className="pj-pills">
                       <a
-                        key={i}
-                        href="/vistoria-360"
+                        href="/vistoria-seguradora"
+                        className="pj-pill"
                         onClick={(e) => {
                           e.preventDefault();
                           navigateToLp(
-                            VISTORIA_SERVICES.find((sv) => sv.id === 'vistoria-360') || null
+                            VISTORIA_SERVICES.find((s) => s.id === 'vistoria-seguradora') || null
                           );
                         }}
                       >
-                        <svg className="seal" viewBox="0 0 200 200" role="img" aria-label={s.label}>
-                          <circle
-                            cx="100"
-                            cy="100"
-                            r="92"
-                            fill={s.bg}
-                            stroke="#fff"
-                            strokeWidth="4"
-                          />
-                          <circle
-                            cx="100"
-                            cy="100"
-                            r="76"
-                            fill="none"
-                            stroke="#ED3237"
-                            strokeWidth="2"
-                            strokeDasharray="4 4"
-                          />
-                          <text
-                            x="100"
-                            y="96"
-                            textAnchor="middle"
-                            fontFamily="Nunito,sans-serif"
-                            fontWeight="900"
-                            fontSize="42"
-                            fill="#fff"
-                          >
-                            360º
-                          </text>
-                          <rect x="34" y="110" width="132" height="26" rx="6" fill="#ED3237" />
-                          <text
-                            x="100"
-                            y="128"
-                            textAnchor="middle"
-                            fontFamily="Nunito,sans-serif"
-                            fontWeight="900"
-                            fontSize="13"
-                            letterSpacing="2"
-                            fill="#fff"
-                          >
-                            {s.sub}
-                          </text>
-                        </svg>
-                        <span>{s.label}</span>
+                        <Icon name="shield" /> Vistoria para Seguradora
                       </a>
-                    ))}
+                      <a
+                        href="/vistoria-financeira"
+                        className="pj-pill"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToLp(
+                            VISTORIA_SERVICES.find((s) => s.id === 'vistoria-financeira') || null
+                          );
+                        }}
+                      >
+                        <Icon name="building" /> Vistoria para Financeira / Consórcio
+                      </a>
+                      <a
+                        href="/vistoria-protecao-automotiva"
+                        className="pj-pill"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToLp(
+                            VISTORIA_SERVICES.find(
+                              (s) => s.id === 'vistoria-protecao-automotiva'
+                            ) || null
+                          );
+                        }}
+                      >
+                        <Icon name="shield" /> Proteção Automotiva
+                      </a>
+                      <a
+                        href="/para-empresas"
+                        className="pj-pill"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToLp(
+                            VISTORIA_SERVICES.find((s) => s.id === 'para-empresas') || null
+                          );
+                        }}
+                      >
+                        <Icon name="truck" /> Frotas Corporativas
+                      </a>
+                    </div>
                   </div>
-                </div>
-
-                <div className="x360-num" aria-hidden="true">
-                  <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
-                    <use href="#rings" />
-                  </svg>
-                  <b>
-                    180<sup>+</sup>
-                  </b>
-                  <span>itens avaliados</span>
-                </div>
-
-                <ul className="x360-list">
-                  <li>
-                    <span className="ico">
-                      <Icon name="paint" />
-                    </span>
-                    <div>
-                      <h3>Pintura Peça a Peça</h3>
-                      <p>
-                        Medição micrométrica (µm) para revelar repinturas, retoques e massa
-                        plástica.
-                      </p>
-                    </div>
-                  </li>
-                  <li>
-                    <span className="ico">
-                      <Icon name="video" />
-                    </span>
-                    <div>
-                      <h3>Vídeo no WhatsApp (Plus)</h3>
-                      <p>
-                        Receba o vídeo do carro funcionando (motor, ar-condicionado, painel e
-                        luzes).
-                      </p>
-                    </div>
-                  </li>
-                  <li>
-                    <span className="ico">
-                      <Icon name="scan" />
-                    </span>
-                    <div>
-                      <h3>Scanner OBD-II & KM (Max)</h3>
-                      <p>
-                        Auditoria eletrônica da quilometragem nos módulos e Certificado do Carro.
-                      </p>
-                    </div>
-                  </li>
-                  <li>
-                    <span className="ico">
-                      <Icon name="star" />
-                    </span>
-                    <div>
-                      <h3>Vistoria Premium (&gt; R$ 200k)</h3>
-                      <p>
-                        Tem um carro acima de R$ 200 mil? Nossa Vistoria Premium inclui análise
-                        mecânica completa.
-                      </p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </section>
-
-            {/* RAIO-X INTERATIVO DO CARRO DE FAMÍLIA */}
-            <section className="sec" id="raio-x">
-              <div className="wrap family">
-                <div className="family-copy">
-                  <span className="kicker">Raio-X Interativo Auto Visão</span>
-                  <h2 className="h2">
-                    <span className="lt">O que nossos peritos enxergam</span> que não aparece a olho
-                    nu.
-                  </h2>
-                  <p className="lead">
-                    Um carro recém-polido pode parecer impecável por fora e esconder longarinas
-                    soldadas, quilometragem adulterada nos módulos, bateria degradada ou passagem
-                    por leilão de sinistro.
-                  </p>
-                  <ul className="why">
-                    <li>
-                      <span className="ico">
-                        <Icon name="shield" />
-                      </span>
-                      <div>
-                        <h3>Segurança para a sua família</h3>
-                        <p>
-                          A estrutura (longarinas e colunas) absorve o impacto em um acidente.
-                          Garantimos que ela esteja íntegra.
-                        </p>
-                      </div>
-                    </li>
-                    <li>
-                      <span className="ico">
-                        <Icon name="gauge" />
-                      </span>
-                      <div>
-                        <h3>Tecnologia contra fraudes eletrônicas</h3>
-                        <p>
-                          Scanner de módulos para auditar KM real, medidor micrométrico de tinta e
-                          certificação AVILOO para baterias de elétricos/híbridos.
-                        </p>
-                      </div>
-                    </li>
-                    <li>
-                      <span className="ico">
-                        <Icon name="file" />
-                      </span>
-                      <div>
-                        <h3>Proteção do seu dinheiro na revenda</h3>
-                        <p>
-                          Evite comprar um veículo desvalorizado por leilão ou sinistro oculto sem
-                          saber.
-                        </p>
-                      </div>
-                    </li>
-                  </ul>
                   <div className="ctas">
                     <a
                       className="btn btn-wa"
                       href={buildWhatsAppUrl(
-                        'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma vistoria completa.'
+                        'Olá! Vim pelo site da Auto Visão Campinas e quero atendimento corporativo (PJ) para Seguradora / Financeira / Proteção Veicular / Frota.'
                       )}
                       target="_blank"
                       rel="noopener"
                     >
                       <Icon name="wa" />
-                      <span>Agendar pelo WhatsApp</span>
+                      <span>Falar com Atendimento PJ</span>
                     </a>
-                  </div>
-                </div>
-
-                <div className="xray">
-                  <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
-                    <use href="#rings" />
-                  </svg>
-                  <p className="xray-hint">
-                    <Icon name="search" /> Toque nos números de 1 a 6 no veículo para inspecionar:
-                  </p>
-                  <div className="xray-stage">
-                    <svg className="car" viewBox="0 0 600 270" aria-hidden="true">
-                      <use href="#car-sym" />
-                    </svg>
-                    {xrayPoints.map((pt, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        className="hot"
-                        style={{ left: pt.left, top: pt.top }}
-                        aria-label={pt.title}
-                        aria-pressed={xraySpot === idx}
-                        onClick={() => setXraySpot(idx)}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="xray-panel" aria-live="polite">
-                    <span className="num">{xraySpot + 1}</span>
-                    <div>
-                      <h3>{xrayPoints[xraySpot].title}</h3>
-                      <p>{xrayPoints[xraySpot].desc}</p>
-                      <small>{xrayPoints[xraySpot].services}</small>
-                    </div>
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* ASSISTENTE INTERATIVO: "QUAL VISTORIA EU PRECISO?" */}
-            <section className="sec alt" id="qual-vistoria">
+            {/* 5. RECOMENDADOR EM 2 CLIQUES — EXCLUSIVO PARA PESSOA FÍSICA (SIMPLES E FÁCIL) */}
+            <section className="sec" id="qual-vistoria">
               <div className="wrap">
                 <div className="sec-head center">
-                  <span className="kicker">Recomendador Inteligente</span>
+                  <span className="kicker">Descubra em 2 Cliques</span>
                   <h2 className="h2">
-                    <span className="lt">Qual vistoria</span> eu preciso hoje?
+                    <span className="lt">Qual vistoria é ideal</span> para o seu caso hoje?
                   </h2>
                   <p className="lead">
-                    Selecione o seu objetivo e o tipo de veículo para ver a recomendação ideal da
-                    nossa equipe técnica em Campinas.
+                    Selecione o seu objetivo e o tipo de veículo para ver a indicação exata dos
+                    nossos especialistas em Campinas.
                   </p>
                 </div>
 
@@ -2148,9 +1640,6 @@ export function App() {
                           { v: 'transferir', label: 'Transferir no DETRAN', icon: 'file' },
                           { v: 'regularizar', label: 'Infração / Regularizar', icon: 'shield' },
                           { v: 'patio', label: 'Liberar de Pátio Público', icon: 'pin' },
-                          { v: 'financeira', label: 'Financeira / Consórcio', icon: 'building' },
-                          { v: 'seguro', label: 'Contratar Seguradora', icon: 'shield' },
-                          { v: 'protecao', label: 'Proteção Automotiva', icon: 'heart' },
                         ].map((opt) => (
                           <button
                             key={opt.v}
@@ -2198,8 +1687,10 @@ export function App() {
                     <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
                       <use href="#rings" />
                     </svg>
-                    <span className="kicker">Recomendação Oficial Auto Visão Campinas</span>
-                    <h3>{wizardRecommendation.title}</h3>
+                    <span className="kicker" style={{ color: '#fff' }}>
+                      Indicação Ideal para Você
+                    </span>
+                    <h3>{wizardRecommendation.shortTitle}</h3>
                     <p className="wz-why">{wizardRecommendation.salesCopy}</p>
                     <ul>
                       {wizardRecommendation.checklist.slice(0, 4).map((item, i) => (
@@ -2230,7 +1721,7 @@ export function App() {
                           navigateToLp(wizardRecommendation);
                         }}
                       >
-                        Abrir LP deste serviço
+                        Ver página do serviço
                       </a>
                     </div>
                   </div>
@@ -2238,188 +1729,83 @@ export function App() {
               </div>
             </section>
 
-            {/* TABELA COMPARATIVA LADO A LADO */}
-            <section className="sec" id="comparar">
-              <div className="wrap">
-                <div className="sec-head">
-                  <span className="kicker">Compare Lado a Lado</span>
+            {/* 6. VÍDEO INTERATIVO REMOTION (CARREGADO SOB DEMANDA PARA 100% PAGESPEED!) */}
+            <section className="sec dark" id="remotion-tour" ref={remotionRef}>
+              <div className="wrap remotion-wrap">
+                <div className="sec-head" style={{ marginBottom: 4 }}>
+                  <span className="kicker" style={{ color: '#fff' }}>
+                    Apresentação em Movimento · Remotion
+                  </span>
                   <h2 className="h2">
-                    <span className="lt">O que cada análise</span> inclui
+                    <span className="lt">Entenda em 15 segundos por que</span> a Auto Visão é líder
+                    em Campinas
                   </h2>
-                  <p className="lead">
-                    Compare as principais modalidades e escolha a vistoria ideal para a sua
-                    necessidade em Campinas.
-                  </p>
                 </div>
 
-                <div
-                  className="mx-wrap"
-                  tabIndex={0}
-                  role="region"
-                  aria-label="Tabela comparativa de vistorias"
-                >
-                  <table className="mx">
-                    <thead>
-                      <tr>
-                        <th scope="col" style={{ textAlign: 'left' }}>
-                          Item avaliado
-                        </th>
-                        <th scope="col">
-                          <span className="ico">
-                            <Icon name="file" />
-                          </span>
-                          Vistoria DETRAN
-                          <small>Transferência</small>
-                        </th>
-                        <th scope="col">
-                          <span className="ico">
-                            <Icon name="search" />
-                          </span>
-                          Cautelar
-                          <small>Compra segura</small>
-                        </th>
-                        <th scope="col" className="hl">
-                          <span className="ico">
-                            <Icon name="orbit" />
-                          </span>
-                          Vistoria 360º®
-                          <small>+180 itens</small>
-                        </th>
-                        <th scope="col">
-                          <span className="ico">
-                            <Icon name="video" />
-                          </span>
-                          360º® Plus
-                          <small>+ Vídeo WhatsApp</small>
-                        </th>
-                        <th scope="col">
-                          <span className="ico">
-                            <Icon name="scan" />
-                          </span>
-                          360º® Max
-                          <small>+ Scanner e Certificado</small>
-                        </th>
-                        <th scope="col">
-                          <span className="ico">
-                            <Icon name="star" />
-                          </span>
-                          Premium
-                          <small>Acima de R$ 200 mil</small>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          label: 'Exigida pelo DETRAN-SP na transferência',
-                          vals: [true, false, false, false, false, false],
-                        },
-                        {
-                          label: 'Identificação: chassi, motor, câmbio e vidros',
-                          vals: [true, true, true, true, true, true],
-                        },
-                        {
-                          label: 'Estrutura: longarinas, colunas e originalidade',
-                          vals: [false, true, true, true, true, true],
-                        },
-                        {
-                          label: 'Histórico: leilão, sinistro, roubo/furto e débitos',
-                          vals: [false, true, true, true, true, true],
-                        },
-                        {
-                          label: 'Medição de pintura peça a peça (µm)',
-                          vals: [false, false, true, true, true, true],
-                        },
-                        {
-                          label: 'Mais de 180 itens avaliados em checklist',
-                          vals: [false, false, true, true, true, true],
-                        },
-                        {
-                          label: 'Vídeo de funcionamento enviado no WhatsApp',
-                          vals: [false, false, false, true, true, false],
-                        },
-                        {
-                          label: 'Scanner eletrônico dos módulos e auditoria de KM',
-                          vals: [false, false, false, false, true, true],
-                        },
-                        {
-                          label: 'Certificado Oficial do Carro Auto Visão',
-                          vals: [false, false, false, false, true, true],
-                        },
-                        {
-                          label: 'Análise mecânica completa (motor, câmbio, suspensão)',
-                          vals: [false, false, false, false, false, true],
-                        },
-                      ].map((row, idx) => (
-                        <tr key={idx}>
-                          <th scope="row">{row.label}</th>
-                          {row.vals.map((v, cIdx) => (
-                            <td key={cIdx} className={cIdx === 2 ? 'hl' : ''}>
-                              {v ? (
-                                <span className="yes" aria-label="Inclui">
-                                  <Icon name="check" />
-                                </span>
-                              ) : (
-                                <span className="no" aria-label="Não inclui" />
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="remotion-nav" role="group" aria-label="Escolher cena da animação">
+                  {[
+                    { idx: null, label: '▶ Reproduzir Tudo' },
+                    { idx: 0, label: '1. DETRAN & Cautelar' },
+                    { idx: 1, label: '2. Vistoria 360º®' },
+                    { idx: 2, label: '3. Scanner KM & Bateria EV' },
+                    { idx: 3, label: '4. Pesados & Empresas' },
+                    { idx: 4, label: '5. Mapa 5 Lojas Campinas' },
+                  ].map((btn) => (
+                    <button
+                      key={String(btn.idx)}
+                      type="button"
+                      className={`remotion-pill ${remotionScene === btn.idx ? 'active' : ''}`}
+                      onClick={() => {
+                        setLoadRemotion(true);
+                        setRemotionScene(btn.idx);
+                      }}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Versão compacta Mobile */}
-                <div className="mxs" role="region" aria-label="Comparativo resumido no celular">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th scope="col">Item</th>
-                        <th scope="col">DETRAN</th>
-                        <th scope="col">Cautelar</th>
-                        <th scope="col" className="hl">
-                          360º®
-                        </th>
-                        <th scope="col">Max</th>
-                        <th scope="col">Premium</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          label: 'Válida DETRAN Transferência',
-                          v: [true, false, false, false, false],
-                        },
-                        { label: 'Chassi, motor e vidros', v: [true, true, true, true, true] },
-                        {
-                          label: 'Estrutura e Histórico (Leilão)',
-                          v: [false, true, true, true, true],
-                        },
-                        { label: 'Pintura peça a peça (µm)', v: [false, false, true, true, true] },
-                        { label: 'Scanner de KM + Módulos', v: [false, false, false, true, true] },
-                        {
-                          label: 'Avaliação Mecânica Completa',
-                          v: [false, false, false, false, true],
-                        },
-                      ].map((r, i) => (
-                        <tr key={i}>
-                          <th scope="row">{r.label}</th>
-                          {r.v.map((inc, j) => (
-                            <td key={j} className={j === 2 ? 'hl' : ''}>
-                              {inc ? (
-                                <span className="y">
-                                  <Icon name="check" />
-                                </span>
-                              ) : (
-                                <span className="n" />
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="remotion-stage">
+                  {loadRemotion ? (
+                    <Suspense
+                      fallback={
+                        <div
+                          style={{
+                            aspectRatio: '1120 / 540',
+                            display: 'grid',
+                            placeItems: 'center',
+                            background: '#ED3237',
+                            color: '#fff',
+                            fontFamily: 'var(--f-head)',
+                            fontWeight: 900,
+                            fontSize: 22,
+                          }}
+                        >
+                          Carregando apresentação interativa Auto Visão...
+                        </div>
+                      }
+                    >
+                      <LazyRemotionPlayerEmbed activeSceneOverride={remotionScene} />
+                    </Suspense>
+                  ) : (
+                    <div
+                      style={{
+                        aspectRatio: '1120 / 540',
+                        display: 'grid',
+                        placeItems: 'center',
+                        background: '#ED3237',
+                        color: '#fff',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-dark"
+                        onClick={() => setLoadRemotion(true)}
+                      >
+                        ▶ Iniciar Apresentação Animada
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -2427,19 +1813,18 @@ export function App() {
         )}
 
         {/* =====================================================================
-            AS 5 UNIDADES EM CAMPINAS (PRESENTE NA HOME E EM TODAS AS LPs)
+            7. NOSSAS LOJAS EM CAMPINAS (SITELINK #nossas-lojas)
            ===================================================================== */}
-        <section className="sec alt" id="unidades">
-          <div className="wrap">
+        <section className="sec alt" id="nossas-lojas">
+          <div className="wrap" id="unidades">
             <div className="sec-head">
-              <span className="kicker">5 Lojas Credenciadas DETRAN-SP em Campinas</span>
+              <span className="kicker">Nossas Lojas · 5 Unidades em Campinas</span>
               <h2 className="h2">
-                <span className="lt">Encontre a unidade Auto Visão</span> mais perto de você em
-                Campinas
+                <span className="lt">Sempre tem uma Auto Visão</span> perto de você em Campinas
               </h2>
               <p className="lead">
-                Todas as 5 unidades contam com sala de espera climatizada, café, Wi-Fi, pagamento
-                facilitado e equipe pericial credenciada pelo DETRAN-SP.
+                Todas as 5 unidades atendem pelo WhatsApp <strong>{WA_DISPLAY}</strong> e pela
+                Central Fixa <strong>{CENTRAL_DISPLAY}</strong>.
               </p>
             </div>
 
@@ -2453,14 +1838,14 @@ export function App() {
                   </span>
                 </div>
                 <h3 className="h2" style={{ color: '#fff' }}>
-                  <span className="lt">Precisa fazer vistoria no sábado à tarde?</span> Auto Visão
-                  Ponte Preta (Abolição)
+                  <span className="lt">Fechou negócio no fim de semana?</span> Sábado até as 16h na
+                  Abolição!
                 </h3>
                 <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 16 }}>
-                  Enquanto a maioria das empresas fecha ao meio-dia, a nossa{' '}
+                  A nossa{' '}
                   <strong>Unidade 3 — Rua da Abolição, 2036 (em frente ao Extra Abolição)</strong>{' '}
-                  atende em plantão especial aos sábados das <strong>08h às 16h</strong> para você
-                  fechar negócio no fim de semana com total segurança!
+                  atende em plantão especial aos sábados das <strong>08h às 16h</strong>. As demais
+                  4 unidades abrem aos sábados das 08h às 12h.
                 </p>
                 <div className="ctas" style={{ marginTop: 4 }}>
                   <a
@@ -2472,7 +1857,7 @@ export function App() {
                     rel="noopener"
                   >
                     <Icon name="wa" />
-                    <span>Agendar no Plantão Abolição</span>
+                    <span>Agendar no WhatsApp {WA_DISPLAY}</span>
                   </a>
                   <a
                     className="btn btn-ghost-w"
@@ -2490,19 +1875,20 @@ export function App() {
                   src="/assets/img/loja-campinas-ponte-preta.webp"
                   alt="Fachada da Unidade de Plantão Auto Visão Ponte Preta - Rua da Abolição, 2036, Campinas"
                   loading="lazy"
+                  decoding="async"
                 />
                 <span>Aberta Sábado das 08h às 16h · DETRAN-SP nº 9072</span>
               </div>
             </div>
 
-            {/* Ferramentas de busca rápida por bairro */}
+            {/* Busca por bairro */}
             <div className="stores-tools">
               <label className="search">
                 <Icon name="search" />
-                <span className="sr">Buscar unidade por bairro, rua ou referência em Campinas</span>
+                <span className="sr">Buscar unidade por bairro em Campinas</span>
                 <input
                   type="search"
-                  placeholder="Buscar por bairro (ex: Taquaral, Centro, Abolição, Amoreiras...)"
+                  placeholder="Filtrar por bairro (Taquaral, Centro, Abolição, Campos Elíseos, Amoreiras...)"
                   value={unitSearch}
                   onChange={(e) => setUnitSearch(e.target.value)}
                 />
@@ -2538,6 +1924,7 @@ export function App() {
                         src={u.photo}
                         alt={`Fachada da unidade Auto Visão ${u.name}`}
                         loading="lazy"
+                        decoding="async"
                         width="960"
                         height="686"
                       />
@@ -2579,17 +1966,8 @@ export function App() {
                         </div>
                         <div>
                           <dt>
-                            <Icon name="phone" />
-                            <span className="sr">Telefone Fixo</span>
-                          </dt>
-                          <dd>
-                            <a href={`tel:${u.phoneTel}`}>{u.phoneDisplay}</a>
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>
                             <Icon name="wa" />
-                            <span className="sr">WhatsApp</span>
+                            <span className="sr">WhatsApp da Unidade</span>
                           </dt>
                           <dd>
                             <a
@@ -2597,8 +1975,9 @@ export function App() {
                               target="_blank"
                               rel="noopener"
                             >
-                              {u.whatsappDisplay}
+                              WhatsApp {WA_DISPLAY}
                             </a>
+                            <small>Central Fixa: {CENTRAL_DISPLAY}</small>
                           </dd>
                         </div>
                         <div>
@@ -2621,16 +2000,12 @@ export function App() {
                         rel="noopener"
                       >
                         <Icon name="wa" />
-                        <span>Agendar nesta unidade</span>
+                        <span>Chamar no WhatsApp {WA_DISPLAY}</span>
                       </a>
-                      <div className="unit-nav">
-                        <a className="ub" href={`tel:${u.phoneTel}`}>
-                          <Icon name="phone" />
-                          <span>Ligar</span>
-                        </a>
+                      <div className="unit-nav" style={{ gridTemplateColumns: '1fr 1fr' }}>
                         <a className="ub" href={u.mapsUrl} target="_blank" rel="noopener">
                           <Icon name="gmaps" />
-                          <span>Maps</span>
+                          <span>Google Maps</span>
                         </a>
                         <a className="ub" href={u.wazeUrl} target="_blank" rel="noopener">
                           <Icon name="waze" />
@@ -2647,10 +2022,9 @@ export function App() {
                   <use href="#rings" />
                 </svg>
                 <span className="kicker">Atendimento Rápido</span>
-                <h3>Não sabe qual das 5 lojas de Campinas está mais perto?</h3>
+                <h3>Não sabe qual das 5 lojas está mais perto?</h3>
                 <p>
-                  Envie sua localização pelo WhatsApp e indicamos na hora a unidade mais próxima e
-                  de menor movimento para você ser atendido imediatamente.
+                  Chame no WhatsApp e indicamos na hora a unidade mais próxima de você em Campinas.
                 </p>
                 <a
                   className="btn btn-white"
@@ -2661,7 +2035,7 @@ export function App() {
                   rel="noopener"
                 >
                   <Icon name="wa" />
-                  <span>Perguntar na Central {WA_DISPLAY}</span>
+                  <span>WhatsApp {WA_DISPLAY}</span>
                 </a>
               </div>
             </div>
@@ -2670,28 +2044,29 @@ export function App() {
               <Icon name="file" />
               <span>
                 <strong>Documentos necessários para a vistoria:</strong> Documento do veículo
-                (CRLV-e digital ou impresso / CRV) e documento oficial com foto de quem conduzir o
-                veículo (CNH ou RG).
+                (CRLV-e digital ou impresso / CRV) e documento oficial com foto do condutor (CNH ou
+                RG).
               </span>
             </p>
           </div>
         </section>
 
         {/* =====================================================================
-            QUEM SOMOS + PRÉ-AGENDAMENTO RÁPIDO
+            8. SOBRE NÓS (#sobre-nos) + NOSSO CONTATO (#nosso-contato)
            ===================================================================== */}
-        <section className="sec" id="agendamento">
+        <section className="sec" id="sobre-nos">
           <div className="wrap schedule-grid">
             <div className="net-copy">
-              <span className="kicker">Nascida em Campinas · Presente em Todo o Brasil</span>
+              <span className="kicker">Sobre Nós · Nascida em Campinas em 2006</span>
               <h2 className="h2">
-                <span className="lt">Especialistas em vistorias</span> automotivas desde 2006.
+                <span className="lt">Quase 20 anos protegendo</span> quem compra, vende e transfere
+                em Campinas.
               </h2>
               <p className="lead">
-                Fundada em Campinas/SP em 2006, a <strong>Auto Visão®</strong> nasceu com a missão
-                de proteger vidas e garantir transparência total na compra, venda e transferência de
-                veículos. Hoje somos mais de 240 unidades pelo Brasil, mantendo em nossas 5 lojas de
-                Campinas o rigor técnico que deu origem à rede.
+                Fundada em Campinas/SP em 2006, a <strong>Auto Visão®</strong> nasceu para acabar
+                com a insegurança no mercado de veículos usados e se tornou uma das maiores redes do
+                Brasil (+240 unidades e +80 mil laudos/mês). Em nossas 5 lojas de Campinas, seu
+                carro é avaliado com tecnologia de ponta e imparcialidade total.
               </p>
 
               <ul className="why">
@@ -2700,21 +2075,22 @@ export function App() {
                     <Icon name="shield" />
                   </span>
                   <div>
-                    <h3>Certificação ISO 9001 e Seguro de Responsabilidade Civil</h3>
+                    <h3>Credenciamento DETRAN-SP e ISO 9001</h3>
                     <p>
-                      Processos auditados, peritos em treinamento contínuo e laudos assegurados.
+                      Processos padronizados, peritos certificados e seguro de responsabilidade
+                      civil profissional.
                     </p>
                   </div>
                 </li>
                 <li>
                   <span className="ico">
-                    <Icon name="clock" />
+                    <Icon name="phone" />
                   </span>
                   <div>
-                    <h3>Laudo na Hora e Pagamento Facilitado</h3>
+                    <h3>Canais Oficiais de Atendimento em Campinas</h3>
                     <p>
-                      Atendimento ágil por ordem de chegada ou horário agendado, com todas as
-                      formas de pagamento.
+                      WhatsApp de Agendamento: <strong>{WA_DISPLAY}</strong> · Telefone Fixo
+                      Central: <strong>{CENTRAL_DISPLAY}</strong>.
                     </p>
                   </div>
                 </li>
@@ -2725,6 +2101,7 @@ export function App() {
                   src="/assets/img/fachada-auto-visao.webp"
                   alt="Fachada Oficial Auto Visão Vistorias Automotivas em Campinas"
                   loading="lazy"
+                  decoding="async"
                   width="1280"
                   height="937"
                 />
@@ -2734,14 +2111,19 @@ export function App() {
               </figure>
             </div>
 
-            <div className="schedule-card">
-              <span className="kicker">Pré-Agendamento Online em 30 Segundos</span>
+            {/* Sitelink #nosso-contato: Formulário de Contato e Pré-Agendamento Direto para o WhatsApp */}
+            <div className="schedule-card" id="nosso-contato">
+              <span className="kicker">Nosso Contato & Pré-Agendamento</span>
               <h3 className="h2" style={{ marginTop: 8, marginBottom: 6 }}>
-                <span className="lt">Garanta seu atendimento</span> prioritário em Campinas
+                <span className="lt">Garanta prioridade pelo</span> WhatsApp {WA_DISPLAY}
               </h3>
-              <p style={{ color: 'var(--muted)', marginBottom: 22, fontSize: 15 }}>
-                Preencha os dados abaixo para gerar sua mensagem pronta e iniciar o atendimento
-                imediato com a nossa central no WhatsApp <strong>{WA_DISPLAY}</strong>.
+              <p style={{ color: 'var(--muted)', marginBottom: 20, fontSize: 15 }}>
+                Escolha a vistoria e a unidade abaixo para enviar sua solicitação pronta no
+                WhatsApp, ou ligue no fixo{' '}
+                <a href={`tel:${CENTRAL_TEL}`} style={{ fontWeight: 700 }}>
+                  {CENTRAL_DISPLAY}
+                </a>
+                .
               </p>
 
               <form className="schedule-form" onSubmit={handleScheduleSubmit}>
@@ -2752,9 +2134,9 @@ export function App() {
                     value={formService}
                     onChange={(e) => setFormService(e.target.value)}
                   >
-                    {VISTORIA_SERVICES.map((s) => (
+                    {PUBLIC_MAIN_SERVICES.map((s) => (
                       <option key={s.id} value={s.title}>
-                        {s.title}
+                        {s.shortTitle}
                       </option>
                     ))}
                     <option value="Combo Vistoria Cautelar + Transferência DETRAN">
@@ -2793,7 +2175,7 @@ export function App() {
                 </div>
 
                 <div className="field">
-                  <label htmlFor="sch-phone">Seu WhatsApp / Telefone</label>
+                  <label htmlFor="sch-phone">Seu WhatsApp</label>
                   <input
                     id="sch-phone"
                     type="tel"
@@ -2804,7 +2186,7 @@ export function App() {
                 </div>
 
                 <div className="field">
-                  <label htmlFor="sch-plate">Modelo ou Placa (opcional)</label>
+                  <label htmlFor="sch-plate">Veículo ou Placa (opcional)</label>
                   <input
                     id="sch-plate"
                     type="text"
@@ -2828,7 +2210,7 @@ export function App() {
                 <div className="full" style={{ marginTop: 6 }}>
                   <button type="submit" className="btn btn-wa" style={{ width: '100%' }}>
                     <Icon name="wa" />
-                    <span>Enviar Pré-Agendamento no WhatsApp</span>
+                    <span>Agendar Agora no WhatsApp {WA_DISPLAY}</span>
                   </button>
                 </div>
               </form>
@@ -2837,18 +2219,18 @@ export function App() {
         </section>
 
         {/* =====================================================================
-            PERGUNTAS FREQUENTES (FAQ)
+            9. PERGUNTAS FREQUENTES (FAQ ENXUTO)
            ===================================================================== */}
         <section className="sec alt" id="duvidas">
           <div className="wrap faq-cols">
             <div className="faq-side">
               <span className="kicker">Dúvidas Frequentes</span>
               <h2 className="h2">
-                <span className="lt">Tudo sobre vistoria</span> veicular em Campinas
+                <span className="lt">Perguntas rápidas sobre</span> vistoria em Campinas
               </h2>
               <p className="lead">
-                Respostas diretas sobre documentos, horários de plantão aos sábados, diferenças
-                entre vistorias e atendimento para empresas.
+                Prefere falar direto com a nossa equipe? Chame no WhatsApp{' '}
+                <strong>{WA_DISPLAY}</strong> ou ligue no fixo <strong>{CENTRAL_DISPLAY}</strong>.
               </p>
               <div className="ctas">
                 <a
@@ -2860,11 +2242,11 @@ export function App() {
                   rel="noopener"
                 >
                   <Icon name="wa" />
-                  <span>Tirar dúvida no WhatsApp</span>
+                  <span>WhatsApp {WA_DISPLAY}</span>
                 </a>
                 <a className="btn btn-ghost" href={`tel:${CENTRAL_TEL}`}>
                   <Icon name="phone" />
-                  <span>Ligar {CENTRAL_DISPLAY}</span>
+                  <span>Fixo {CENTRAL_DISPLAY}</span>
                 </a>
               </div>
             </div>
@@ -2886,7 +2268,7 @@ export function App() {
         </section>
 
         {/* =====================================================================
-            CTA FINAL DE CONVERSÃO
+            10. CTA FINAL DE CONVERSÃO
            ===================================================================== */}
         <section className="final" aria-label="Agende sua vistoria em Campinas">
           <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
@@ -2899,9 +2281,8 @@ export function App() {
                 <span className="lt">Seu carro em boas mãos</span> nas 5 unidades de Campinas.
               </h2>
               <p>
-                Chame no WhatsApp para saber valores, tirar dúvidas ou agendar seu atendimento sem
-                espera no Taquaral, Centro, Ponte Preta (Abolição), Campos Elíseos ou Parque
-                Industrial.
+                Atendimento imediato pelo WhatsApp no Taquaral, Centro, Ponte Preta (Abolição —
+                Plantão Sábado até 16h), Campos Elíseos e Parque Industrial.
               </p>
             </div>
             <div className="final-card">
@@ -2920,17 +2301,17 @@ export function App() {
               </a>
               <a
                 className="btn btn-ghost-w"
-                href="#unidades"
+                href="#nossas-lojas"
                 onClick={(e) => {
                   e.preventDefault();
-                  scrollToSection('unidades');
+                  scrollToSection('nossas-lojas');
                 }}
               >
                 <Icon name="pin" />
                 <span>Ver Endereços das 5 Lojas</span>
               </a>
               <small>
-                <Icon name="phone" /> Central de Atendimento Campinas:{' '}
+                <Icon name="phone" /> Telefone Fixo Central:{' '}
                 <a href={`tel:${CENTRAL_TEL}`} style={{ color: '#fff', fontWeight: 700 }}>
                   {CENTRAL_DISPLAY}
                 </a>
@@ -2941,7 +2322,7 @@ export function App() {
       </main>
 
       {/* =====================================================================
-          RODAPÉ INSTITUCIONAL + CENTRAL DE LINKS GOOGLE ADS (LPs POR SERVIÇO)
+          RODAPÉ INSTITUCIONAL + LINKS GOOGLE ADS (SITELINKS E LPs)
          ===================================================================== */}
       <footer className="ft">
         <div className="strip" style={{ ['--h' as any]: '36px' }} aria-hidden="true" />
@@ -2999,9 +2380,9 @@ export function App() {
             </div>
 
             <div>
-              <h4>Landing Pages por Serviço</h4>
+              <h4>Nossos Serviços</h4>
               <ul>
-                {VISTORIA_SERVICES.map((s) => (
+                {PUBLIC_MAIN_SERVICES.map((s) => (
                   <li key={s.id}>
                     <a
                       href={`/${s.slug}`}
@@ -3051,28 +2432,45 @@ export function App() {
                   </a>
                 </li>
                 <li>
-                  <a href={`tel:${CENTRAL_TEL}`}>Central {CENTRAL_DISPLAY}</a>
-                </li>
-                <li>
-                  <a href="tel:+551932343929">Taquaral / Centro (19) 3234-3929</a>
-                </li>
-                <li>
-                  <a href="tel:+551933684142">Pq. Industrial (19) 3368-4142</a>
+                  <a href={`tel:${CENTRAL_TEL}`}>Telefone Fixo {CENTRAL_DISPLAY}</a>
                 </li>
                 <li>
                   <a href="mailto:contato@autovisao.com">contato@autovisao.com</a>
                 </li>
                 <li>
-                  <a href="https://sejaumfranqueado.autovisao.com/" target="_blank" rel="noopener">
-                    Seja um Franqueado Auto Visão
+                  <a
+                    href="/sobre-nos"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection('sobre-nos');
+                    }}
+                  >
+                    Sobre Nós
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/nosso-contato"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection('nosso-contato');
+                    }}
+                  >
+                    Nosso Contato
                   </a>
                 </li>
               </ul>
             </div>
           </div>
 
-          {/* Painel Rápido de Links para Google Ads (Sitelinks e Grupos de Anúncios) */}
-          <details style={{ marginTop: 24, borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 20 }}>
+          {/* Painel Rápido de Sitelinks e LPs para Google Ads */}
+          <details
+            style={{
+              marginTop: 24,
+              borderTop: '1px solid rgba(255,255,255,0.12)',
+              paddingTop: 20,
+            }}
+          >
             <summary
               style={{
                 cursor: 'pointer',
@@ -3082,32 +2480,72 @@ export function App() {
                 fontSize: 14,
               }}
             >
-              🔗 Links Diretos de Landing Pages por Serviço (Para Campanhas Google Ads / Meta Ads)
+              🔗 Sitelinks e Landing Pages para Google Ads (Clique para copiar as URLs)
             </summary>
-            <div className="ads-links-grid" style={{ marginTop: 14 }}>
-              {VISTORIA_SERVICES.map((s) => (
-                <div key={s.id} className="ads-link-card">
-                  <b>
-                    <span>{s.shortTitle}</span>
-                    <button
-                      type="button"
-                      onClick={() => copyLpUrl(s.slug)}
-                      style={{
-                        background: copiedSlug === s.slug ? '#18743B' : 'var(--brand)',
-                        color: '#fff',
-                        border: 0,
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 11,
-                        fontWeight: 800,
-                      }}
-                    >
-                      {copiedSlug === s.slug ? '✓ Copiado' : 'Copiar URL'}
-                    </button>
-                  </b>
-                  <code>/{s.slug}</code>
-                </div>
-              ))}
+
+            <div style={{ marginTop: 14 }}>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 10 }}>
+                <strong>Sitelinks Institucionais (Google Ads):</strong>
+              </p>
+              <div className="ads-links-grid" style={{ marginBottom: 18 }}>
+                {[
+                  { title: 'Sobre Nós', slug: 'sobre-nos' },
+                  { title: 'Nossos Serviços', slug: 'nossos-servicos' },
+                  { title: 'Nossas Lojas (5)', slug: 'nossas-lojas' },
+                  { title: 'Nosso Contato', slug: 'nosso-contato' },
+                ].map((sl) => (
+                  <div key={sl.slug} className="ads-link-card">
+                    <b>
+                      <span>{sl.title}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyUrl(sl.slug)}
+                        style={{
+                          background: copiedSlug === sl.slug ? '#18743B' : 'var(--brand)',
+                          color: '#fff',
+                          border: 0,
+                          borderRadius: 6,
+                          padding: '4px 8px',
+                          fontSize: 11,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {copiedSlug === sl.slug ? '✓ Copiado' : 'Copiar URL'}
+                      </button>
+                    </b>
+                    <code>/{sl.slug}</code>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 10 }}>
+                <strong>Landing Pages por Serviço (Grupos de Anúncios):</strong>
+              </p>
+              <div className="ads-links-grid">
+                {VISTORIA_SERVICES.map((s) => (
+                  <div key={s.id} className="ads-link-card">
+                    <b>
+                      <span>{s.shortTitle}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyUrl(s.slug)}
+                        style={{
+                          background: copiedSlug === s.slug ? '#18743B' : 'var(--brand)',
+                          color: '#fff',
+                          border: 0,
+                          borderRadius: 6,
+                          padding: '4px 8px',
+                          fontSize: 11,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {copiedSlug === s.slug ? '✓ Copiado' : 'Copiar URL'}
+                      </button>
+                    </b>
+                    <code>/{s.slug}</code>
+                  </div>
+                ))}
+              </div>
             </div>
           </details>
 
@@ -3144,11 +2582,7 @@ export function App() {
         </div>
       </footer>
 
-      {/* =====================================================================
-          GAVETA INTERATIVA (BOTTOM SHEET) PARA CELULAR:
-          1) "ENDEREÇOS" -> MOSTRA AS 5 LOJAS E LEVA DIRETO PRO GOOGLE MAPS
-          2) "SERVIÇOS"  -> RESUMO DOS 13 SERVIÇOS E ABRE A LP OU WHATSAPP
-         ===================================================================== */}
+      {/* GAVETAS MOBILE: 1) ENDEREÇOS -> GOOGLE MAPS / WHATSAPP  2) SERVIÇOS (RESUMO) */}
       {mobileSheet === 'enderecos' && (
         <div
           className="sheet-backdrop"
@@ -3163,7 +2597,7 @@ export function App() {
             <div className="sheet-head">
               <div>
                 <h3>Escolha a Unidade em Campinas</h3>
-                <small>Toque na loja para abrir a rota direto no Google Maps</small>
+                <small>Toque em Google Maps para abrir a rota ou chame no WhatsApp</small>
               </div>
               <button
                 type="button"
@@ -3182,9 +2616,7 @@ export function App() {
                 >
                   <div className="sheet-unit-top">
                     <b>{u.shortName}</b>
-                    <span>
-                      {u.isSaturdayDuty ? '★ Sábado até 16h' : 'Sábado até 12h'}
-                    </span>
+                    <span>{u.isSaturdayDuty ? '★ Sábado até 16h' : 'Sábado até 12h'}</span>
                   </div>
                   <div className="sheet-unit-addr">
                     {u.address}
@@ -3200,16 +2632,7 @@ export function App() {
                       className="sheet-btn maps"
                     >
                       <Icon name="gmaps" />
-                      <span>Google Maps</span>
-                    </a>
-                    <a
-                      href={u.wazeUrl}
-                      target="_blank"
-                      rel="noopener"
-                      className="sheet-btn"
-                    >
-                      <Icon name="waze" />
-                      <span>Waze</span>
+                      <span>Abrir no Google Maps</span>
                     </a>
                     <a
                       href={buildWhatsAppUrl(u.whatsappMsg)}
@@ -3233,7 +2656,7 @@ export function App() {
           className="sheet-backdrop"
           role="dialog"
           aria-modal="true"
-          aria-label="Resumo de todos os serviços de vistoria"
+          aria-label="Resumo dos serviços de vistoria"
           onClick={(e) => {
             if (e.target === e.currentTarget) setMobileSheet(null);
           }}
@@ -3242,7 +2665,7 @@ export function App() {
             <div className="sheet-head">
               <div>
                 <h3>Nossas Vistorias (Resumo)</h3>
-                <small>Toque no serviço para abrir os detalhes ou agendar</small>
+                <small>Toque no serviço para ver o banner e todos os detalhes</small>
               </div>
               <button
                 type="button"
@@ -3254,7 +2677,7 @@ export function App() {
               </button>
             </div>
             <div className="sheet-body">
-              {VISTORIA_SERVICES.map((svc) => (
+              {PUBLIC_MAIN_SERVICES.map((svc) => (
                 <a
                   key={svc.id}
                   href={`/${svc.slug}`}
@@ -3281,9 +2704,7 @@ export function App() {
         </div>
       )}
 
-      {/* =====================================================================
-          MODAL DETALHADO DE CADA SERVIÇO
-         ===================================================================== */}
+      {/* MODAL DETALHADO DE CADA SERVIÇO */}
       {selectedService && (
         <div
           className="svc-modal-backdrop"
@@ -3322,7 +2743,7 @@ export function App() {
               <div className="svc-modal-cols">
                 <div className="box">
                   <h3>
-                    <Icon name="check" /> O que é avaliado e conferido
+                    <Icon name="check" /> O que é avaliado
                   </h3>
                   <ul>
                     {selectedService.checklist.map((c, idx) => (
@@ -3348,23 +2769,6 @@ export function App() {
                       ))}
                     </ul>
                   </div>
-
-                  <div className="box">
-                    <h3>
-                      <Icon name="users" /> Para quem é indicado
-                    </h3>
-                    <p style={{ fontSize: 15, color: 'var(--ink)' }}>{selectedService.idealFor}</p>
-                    <p
-                      style={{
-                        marginTop: 10,
-                        fontSize: 13.5,
-                        fontWeight: 700,
-                        color: 'var(--action)',
-                      }}
-                    >
-                      ⏱ Tempo médio de execução: {selectedService.timeEstimate}
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -3387,17 +2791,7 @@ export function App() {
                     rel="noopener"
                   >
                     <Icon name="wa" />
-                    <span>Agendar {selectedService.shortTitle} no WhatsApp</span>
-                  </a>
-                  <a
-                    className="btn btn-ghost"
-                    href={`/${selectedService.slug}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigateToLp(selectedService);
-                    }}
-                  >
-                    Abrir Landing Page exclusiva
+                    <span>Agendar no WhatsApp {WA_DISPLAY}</span>
                   </a>
                 </div>
                 <button
@@ -3534,12 +2928,7 @@ export function App() {
         <Icon name="up" />
       </button>
 
-      {/* =====================================================================
-          BARRA FIXA DE CELULAR COM OS 3 BOTÕES SOLICITADOS:
-          1) WhatsApp
-          2) Endereços (abre os 5 endereços e leva direto para o Google Maps)
-          3) Serviços (abre o resumo de todos os serviços)
-         ===================================================================== */}
+      {/* BARRA FIXA DE CELULAR COM OS 3 BOTÕES: WHATSAPP, ENDEREÇOS (5), SERVIÇOS */}
       <nav className="mbar" aria-label="Atalhos rápidos no celular">
         <a
           className="wa"

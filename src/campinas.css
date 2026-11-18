@@ -12,7 +12,6 @@ body,
   overflow-x: clip !important;
 }
 
-/* Todos os grids e filhos de grid/flex precisam de min-width: 0 para nunca estourar a coluna */
 .units,
 .grid-sv,
 .flagship-grid,
@@ -27,7 +26,9 @@ body,
 .ft-top,
 .lists,
 .ads-links-grid,
-.opts {
+.opts,
+.lp-two-cols,
+.pj-strip {
   min-width: 0;
 }
 
@@ -45,12 +46,14 @@ body,
 .ft-top > *,
 .lists > *,
 .ads-links-grid > *,
-.opts > * {
+.opts > *,
+.lp-two-cols > *,
+.pj-strip > * {
   min-width: 0;
   max-width: 100%;
 }
 
-/* Redefinir colunas de grades do site.css/matriz.css com minmax(0, 1fr) */
+/* Redefinir colunas de grades com minmax(0, 1fr) */
 .units {
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
@@ -67,6 +70,13 @@ body,
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
 
+.lp-two-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 20px;
+}
+
 @media (max-width: 1100px) {
   .units,
   .grid-sv,
@@ -75,10 +85,17 @@ body,
   }
 }
 
+@media (max-width: 960px) {
+  .lp-two-cols {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 @media (max-width: 640px) {
   .units,
   .grid-sv,
-  .x360-list {
+  .x360-list,
+  .lp-two-cols {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
@@ -107,7 +124,9 @@ body,
 .flagship-card h3,
 .flagship-card p,
 .duty-banner h3,
-.duty-banner p {
+.duty-banner p,
+.box h3,
+.box li span {
   overflow-wrap: break-word;
   word-break: break-word;
   min-width: 0;
@@ -191,58 +210,7 @@ body,
   }
 }
 
-/* 4. Remotion Showreel Section */
-.remotion-wrap {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
-}
-
-.remotion-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.remotion-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.88);
-  font: 800 14px/1 var(--f-head);
-  transition: all 0.2s var(--ease);
-}
-
-.remotion-pill:hover {
-  border-color: #fff;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.remotion-pill.active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-  box-shadow: 0 10px 24px -8px rgba(237, 50, 55, 0.8);
-}
-
-.remotion-stage {
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  border-radius: 24px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 36px 80px -28px rgba(0, 0, 0, 0.75);
-  background: #151415;
-}
-
-/* 5. Destaque Duplo: Vistoria do DETRAN + Vistoria Cautelar */
+/* 4. Destaque Duplo: Vistoria do DETRAN + Vistoria Cautelar (Com Kicker 100% visível!) */
 .flagship-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -274,9 +242,40 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.flagship-card.detran .kicker {
+  color: #fff !important;
+}
+
+.flagship-card.detran .kicker::before {
+  background: var(--brand) !important;
+}
+
 .flagship-card.cautelar {
   background: var(--brand);
   color: #fff;
+}
+
+/* REGRA CRÍTICA DS SEÇÃO 7: No fundo vermelho, barra e texto do kicker SEMPRE brancos! */
+.flagship-card.cautelar .kicker,
+.red .kicker,
+.promo .kicker,
+.final .kicker {
+  color: #fff !important;
+}
+
+.flagship-card.cautelar .kicker::before,
+.red .kicker::before,
+.promo .kicker::before,
+.final .kicker::before {
+  background: #fff !important;
+}
+
+.flagship-card .rings {
+  width: 680px;
+  right: -220px;
+  top: -220px;
+  color: #000;
+  opacity: 0.09;
 }
 
 .flagship-card h3 {
@@ -293,7 +292,7 @@ body,
 .flagship-card p {
   font-size: 16px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.94);
 }
 
 .flagship-list {
@@ -325,6 +324,71 @@ body,
 
 .flagship-card.detran .flagship-list li .ok-dot {
   background: var(--brand);
+  color: #fff;
+}
+
+/* 5. Faixa Simplificada para Empresas (PJ): Seguradora, Financeira e Proteção Veicular */
+.pj-strip {
+  position: relative;
+  margin-top: 28px;
+  padding: clamp(24px, 3.5vw, 38px);
+  border-radius: 24px;
+  background: radial-gradient(120% 120% at 85% 20%, #2C2A2B 0%, #151415 65%);
+  color: #fff;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) auto;
+  gap: 28px;
+  align-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.pj-strip .kicker {
+  color: #fff !important;
+}
+
+.pj-strip .kicker::before {
+  background: var(--brand) !important;
+}
+
+.pj-strip h3 {
+  color: #fff;
+  font-size: clamp(22px, 2.6vw, 30px);
+  margin-top: 10px;
+}
+
+.pj-strip p {
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 8px;
+  font-size: 15.5px;
+  max-width: 680px;
+}
+
+.pj-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.pj-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font: 700 13.5px/1 var(--f-head);
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.pj-pill:hover {
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
 }
 
@@ -386,7 +450,58 @@ body,
   text-align: center;
 }
 
-/* 7. Modal de Detalhes de cada Serviço */
+/* 7. Remotion Showreel Section */
+.remotion-wrap {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.remotion-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.remotion-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font: 800 13.5px/1 var(--f-head);
+  transition: all 0.2s var(--ease);
+}
+
+.remotion-pill:hover {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.remotion-pill.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: 0 10px 24px -8px rgba(237, 50, 55, 0.8);
+}
+
+.remotion-stage {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 36px 80px -28px rgba(0, 0, 0, 0.75);
+  background: #151415;
+}
+
+/* 8. Modal de Detalhes de cada Serviço */
 .svc-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -460,7 +575,7 @@ body,
   gap: 24px;
 }
 
-/* 8. Formulário de Agendamento Rápido Campinas */
+/* 9. Formulário de Agendamento Rápido Campinas */
 .schedule-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
@@ -786,7 +901,7 @@ body,
 
 .sheet-unit-actions {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 8px;
 }
 
@@ -872,7 +987,8 @@ body,
   .flagship-grid,
   .duty-banner,
   .schedule-grid,
-  .svc-modal-cols {
+  .svc-modal-cols,
+  .pj-strip {
     grid-template-columns: minmax(0, 1fr);
   }
   .ads-links-grid {
@@ -897,10 +1013,11 @@ body,
   .flagship-card {
     padding: 22px 18px;
   }
-  .duty-banner {
+  .duty-banner,
+  .pj-strip {
     padding: 22px 18px;
   }
-  .sheet-unit-actions {
-    grid-template-columns: 1.2fr 0.9fr 0.9fr;
+  .box {
+    padding: 20px 18px !important;
   }
 }

@@ -9,15 +9,15 @@
       <path d="M356 136V100l110-1c13 0 21 4 28 12l21 25z"/>
     </clipPath>
     <filter id="cardShadow" x="-15%" y="-15%" width="130%" height="140%">
-      <feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="#000000" flood-opacity="0.38"/>
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#000000" flood-opacity="0.35"/>
     </filter>
   </defs>
 
   <!-- Fundo Vermelho Marca #ED3237 -->
   <rect width="1200" height="630" fill="#ED3237"/>
 
-  <!-- 8 Círculos Concêntricos (Preto a 9%) -->
-  <g transform="translate(1050, 315)" fill="none" stroke="#000000" stroke-opacity="0.09" stroke-width="34">
+  <!-- 8 Círculos Concêntricos (Preto a 9% sobre o vermelho - DS Seção 3) -->
+  <g transform="translate(1060, 300)" fill="none" stroke="#000000" stroke-opacity="0.09" stroke-width="34">
     <circle r="60"/>
     <circle r="130"/>
     <circle r="200"/>
@@ -28,49 +28,52 @@
     <circle r="550"/>
   </g>
 
-  <!-- Topo: Marca e Selo DETRAN -->
-  <g transform="translate(72, 48)">
-    <text x="0" y="34" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="38" fill="#FFFFFF" letter-spacing="-1">autovisão</text>
-    <circle cx="101" cy="22" r="5" fill="#151415"/>
-    <text x="2" y="50" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="10" fill="#FFFFFF" letter-spacing="3.5" opacity="0.9">VISTORIAS AUTOMOTIVAS</text>
+  <!-- Selo Superior Direito: Credenciadas DETRAN-SP -->
+  <g transform="translate(804, 38)">
+    <rect width="336" height="44" rx="22" fill="rgba(21,20,21,0.25)" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>
+    <circle cx="28" cy="22" r="9" fill="#25D366"/>
+    <path d="M24 22l3 3 6-6" stroke="#0B3B22" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="180" y="28" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="16" fill="#FFFFFF">5 Lojas Credenciadas DETRAN-SP</text>
   </g>
 
-  <g transform="translate(880, 48)">
-    <rect width="248" height="40" rx="20" fill="rgba(21,20,21,0.22)" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
-    <text x="124" y="25" text-anchor="middle" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#FFFFFF">5 Lojas Credenciadas DETRAN-SP</text>
-  </g>
+  <!-- Coluna Esquerda: Kicker + Título em Duas Partes + Lista de Serviços + CTA WhatsApp -->
+  <g transform="translate(64, 134)">
+    <rect x="0" y="0" width="38" height="6" rx="3" fill="#FFFFFF"/>
+    <text x="50" y="9" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="16" fill="#FFFFFF" letter-spacing="2.5">VISTORIA VEICULAR EM CAMPINAS</text>
 
-  <!-- Coluna Esquerda: Kicker + Título Leve + Título Impacto + CTA -->
-  <g transform="translate(72, 152)">
-    <rect x="0" y="0" width="32" height="5" rx="2.5" fill="#FFFFFF"/>
-    <text x="44" y="8" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="15" fill="#FFFFFF" letter-spacing="2.5">VISTORIA VEICULAR EM CAMPINAS</text>
+    <text x="0" y="68" font-family="Arial, Helvetica, sans-serif" font-weight="normal" font-size="52" fill="#FFFFFF">Quem você ama</text>
+    <text x="0" y="128" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="60" fill="#FFFFFF">merece um carro</text>
+    <text x="0" y="188" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="60" fill="#FFFFFF">vistoriado.</text>
 
-    <text x="0" y="64" font-family="Nunito, Arial, sans-serif" font-weight="300" font-size="52" fill="#FFFFFF">Quem você ama</text>
-    <text x="0" y="120" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="56" fill="#FFFFFF">merece um carro</text>
-    <text x="0" y="176" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="56" fill="#FFFFFF">vistoriado.</text>
+    <text x="0" y="236" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="20" fill="#FFFFFF">• Vistoria do DETRAN (Transferência)   • Vistoria Cautelar</text>
+    <text x="0" y="266" font-family="Arial, Helvetica, sans-serif" font-weight="normal" font-size="18" fill="rgba(255,255,255,0.92)">• Vistoria 360º® (+180 itens)  • Pintura  • Scanner KM  • Elétricos  • Pesados</text>
 
-    <text x="0" y="222" font-family="Inter, Arial, sans-serif" font-weight="500" font-size="19" fill="rgba(255,255,255,0.92)">Vistoria do DETRAN · Vistoria Cautelar · Vistoria 360º®</text>
-    <text x="0" y="248" font-family="Inter, Arial, sans-serif" font-weight="500" font-size="19" fill="rgba(255,255,255,0.92)">Pintura · Scanner KM · Bateria Elétricos · Pesados · Premium</text>
-
-    <!-- Botão WhatsApp -->
-    <g transform="translate(0, 280)">
-      <rect width="276" height="60" rx="12" fill="#25D366"/>
-      <text x="138" y="37" text-anchor="middle" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="21" fill="#0B3B22">Agende pelo WhatsApp</text>
-      <text x="296" y="39" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="26" fill="#FFFFFF">(19) 99224-8383</text>
+    <!-- Botão CTA WhatsApp #25D366 + Número ao lado -->
+    <g transform="translate(0, 294)">
+      <rect width="292" height="64" rx="14" fill="#25D366" filter="url(#cardShadow)"/>
+      <text x="146" y="40" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="22" fill="#0B3B22">Agende pelo WhatsApp</text>
+      <text x="312" y="42" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="30" fill="#FFFFFF">(19) 99224-8383</text>
     </g>
   </g>
 
-  <!-- Coluna Direita: Lupa + Carro de Família + Etiquetas Flutuantes -->
-  <!-- Lupa -->
-  <g transform="translate(940, 145) scale(0.85)" filter="url(#cardShadow)">
-    <circle cx="86" cy="86" r="62" fill="rgba(255,255,255,0.10)" stroke="#FFFFFF" stroke-width="22"/>
+  <!-- Coluna Direita: Lupa + Placa Mercosul + Carro de Família + Etiquetas Flutuantes -->
+  <g transform="translate(955, 118) scale(0.86)" filter="url(#cardShadow)">
+    <circle cx="86" cy="86" r="62" fill="rgba(255,255,255,0.12)" stroke="#FFFFFF" stroke-width="22"/>
     <path d="M134 134l42 42" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
     <circle cx="86" cy="86" r="16" fill="#151415"/>
   </g>
 
-  <!-- Carro de Família -->
-  <g transform="translate(650, 265) scale(0.82)">
-    <ellipse cx="300" cy="250" rx="270" ry="13" fill="#000000" opacity="0.22"/>
+  <!-- Placa Mercosul Ilustrativa ABC1D23 (DS Seção 6) -->
+  <g transform="translate(656, 128) rotate(-4)" filter="url(#cardShadow)">
+    <rect width="224" height="82" rx="14" fill="#FFFFFF" stroke="#151415" stroke-width="6"/>
+    <path d="M4 14 C4 8 8 4 14 4 L210 4 C216 4 220 8 220 14 L220 26 L4 26 Z" fill="#1D3A8A"/>
+    <text x="112" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="11" fill="#FFFFFF" letter-spacing="4">BRASIL</text>
+    <text x="112" y="64" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="34" fill="#151415" letter-spacing="2">ABC1D23</text>
+  </g>
+
+  <!-- Carro de Família em Perfil Perfeito Esquerda (DS Seção 4) -->
+  <g transform="translate(636, 245) scale(0.86)">
+    <ellipse cx="300" cy="250" rx="270" ry="13" fill="#000000" opacity="0.24"/>
     <path fill="url(#carBody)" d="M48 230H40c-8 0-12-5-12-14v-24c2-18 14-27 34-31l126-22c11-2 20-7 28-14l38-32c8-7 18-10 30-10l188-2c17 0 29 5 38 14l40 40c13 9 20 20 21 35l2 46c0 9-5 14-13 14h-36a52 52 0 0 0-104 0H192a52 52 0 0 0-104 0z"/>
     <path fill="#1A1A1A" d="M226 136 263 101h85v35zM356 136V100l110-1c13 0 21 4 28 12l21 25z"/>
     <g clip-path="url(#carWindows)" fill="#3A3A3C">
@@ -89,35 +92,26 @@
   </g>
 
   <!-- Etiqueta Flutuante 1 -->
-  <g transform="translate(640, 175)" filter="url(#cardShadow)">
-    <rect width="215" height="64" rx="14" fill="#FFFFFF"/>
-    <circle cx="32" cy="32" r="20" fill="#ED3237"/>
-    <path d="M24 32l5 5 11-11" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="62" y="29" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="18" fill="#151415">+180 Itens</text>
-    <text x="62" y="48" font-family="Inter, Arial, sans-serif" font-weight="500" font-size="13" fill="#696267">Vistoria 360º® Exclusiva</text>
+  <g transform="translate(620, 456)" filter="url(#cardShadow)">
+    <rect width="242" height="66" rx="16" fill="#FFFFFF"/>
+    <circle cx="35" cy="33" r="21" fill="#ED3237"/>
+    <path d="M27 33l5 5 11-11" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="66" y="30" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="19" fill="#151415">Vistoria 360º®</text>
+    <text x="66" y="50" font-family="Arial, Helvetica, sans-serif" font-weight="normal" font-size="14" fill="#696267">+180 itens avaliados</text>
   </g>
 
   <!-- Etiqueta Flutuante 2 -->
-  <g transform="translate(920, 465)" filter="url(#cardShadow)">
-    <rect width="225" height="64" rx="14" fill="#FFFFFF"/>
-    <circle cx="32" cy="32" r="20" fill="#ED3237"/>
-    <path d="M24 32l5 5 11-11" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="62" y="29" font-family="Nunito, Arial Black, sans-serif" font-weight="900" font-size="18" fill="#151415">Laudo na Hora</text>
-    <text x="62" y="48" font-family="Inter, Arial, sans-serif" font-weight="500" font-size="13" fill="#696267">Taquaral · Centro · Abolição</text>
+  <g transform="translate(888, 456)" filter="url(#cardShadow)">
+    <rect width="252" height="66" rx="16" fill="#FFFFFF"/>
+    <circle cx="35" cy="33" r="21" fill="#18743B"/>
+    <path d="M27 33l5 5 11-11" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="66" y="30" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="19" fill="#151415">Laudo na Hora</text>
+    <text x="66" y="50" font-family="Arial, Helvetica, sans-serif" font-weight="normal" font-size="14" fill="#696267">Plantão Sábado até 16h</text>
   </g>
 
-  <!-- Barra de Benefícios Base -->
-  <rect x="0" y="556" width="1200" height="42" fill="#151415"/>
-  <text x="600" y="582" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="15" fill="#FFFFFF" letter-spacing="0.5">
-    5 LOJAS EM CAMPINAS (TAQUARAL · CENTRO · PONTE PRETA · CAMPOS ELÍSEOS · AMOREIRAS)  ·  PLANTÃO AOS SÁBADOS ATÉ 16H
+  <!-- Barra de Unidades Base -->
+  <rect x="0" y="550" width="1200" height="44" fill="#151415"/>
+  <text x="600" y="578" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="16" fill="#FFFFFF" letter-spacing="0.8">
+    5 LOJAS EM CAMPINAS: TAQUARAL · CENTRO · PONTE PRETA (ABOLIÇÃO) · CAMPOS ELÍSEOS · AMOREIRAS
   </text>
-
-  <!-- Faixa Quadriculada na Base (32px) -->
-  <g transform="translate(0, 598)">
-    <rect width="1200" height="32" fill="#151415"/>
-    <g fill="#FFFFFF">
-      <rect x="0" y="0" width="16" height="16"/><rect x="32" y="0" width="16" height="16"/><rect x="64" y="0" width="16" height="16"/><rect x="96" y="0" width="16" height="16"/><rect x="128" y="0" width="16" height="16"/><rect x="160" y="0" width="16" height="16"/><rect x="192" y="0" width="16" height="16"/><rect x="224" y="0" width="16" height="16"/><rect x="256" y="0" width="16" height="16"/><rect x="288" y="0" width="16" height="16"/><rect x="320" y="0" width="16" height="16"/><rect x="352" y="0" width="16" height="16"/><rect x="384" y="0" width="16" height="16"/><rect x="416" y="0" width="16" height="16"/><rect x="448" y="0" width="16" height="16"/><rect x="480" y="0" width="16" height="16"/><rect x="512" y="0" width="16" height="16"/><rect x="544" y="0" width="16" height="16"/><rect x="576" y="0" width="16" height="16"/><rect x="608" y="0" width="16" height="16"/><rect x="640" y="0" width="16" height="16"/><rect x="672" y="0" width="16" height="16"/><rect x="704" y="0" width="16" height="16"/><rect x="736" y="0" width="16" height="16"/><rect x="768" y="0" width="16" height="16"/><rect x="800" y="0" width="16" height="16"/><rect x="832" y="0" width="16" height="16"/><rect x="864" y="0" width="16" height="16"/><rect x="896" y="0" width="16" height="16"/><rect x="928" y="0" width="16" height="16"/><rect x="960" y="0" width="16" height="16"/><rect x="992" y="0" width="16" height="16"/><rect x="1024" y="0" width="16" height="16"/><rect x="1056" y="0" width="16" height="16"/><rect x="1088" y="0" width="16" height="16"/><rect x="1120" y="0" width="16" height="16"/><rect x="1152" y="0" width="16" height="16"/><rect x="1184" y="0" width="16" height="16"/>
-      <rect x="16" y="16" width="16" height="16"/><rect x="48" y="16" width="16" height="16"/><rect x="80" y="16" width="16" height="16"/><rect x="112" y="16" width="16" height="16"/><rect x="144" y="16" width="16" height="16"/><rect x="176" y="16" width="16" height="16"/><rect x="208" y="16" width="16" height="16"/><rect x="240" y="16" width="16" height="16"/><rect x="272" y="16" width="16" height="16"/><rect x="304" y="16" width="16" height="16"/><rect x="336" y="16" width="16" height="16"/><rect x="368" y="16" width="16" height="16"/><rect x="400" y="16" width="16" height="16"/><rect x="432" y="16" width="16" height="16"/><rect x="464" y="16" width="16" height="16"/><rect x="496" y="16" width="16" height="16"/><rect x="528" y="16" width="16" height="16"/><rect x="560" y="16" width="16" height="16"/><rect x="592" y="16" width="16" height="16"/><rect x="624" y="16" width="16" height="16"/><rect x="656" y="16" width="16" height="16"/><rect x="688" y="16" width="16" height="16"/><rect x="720" y="16" width="16" height="16"/><rect x="752" y="16" width="16" height="16"/><rect x="784" y="16" width="16" height="16"/><rect x="816" y="16" width="16" height="16"/><rect x="848" y="16" width="16" height="16"/><rect x="880" y="16" width="16" height="16"/><rect x="912" y="16" width="16" height="16"/><rect x="944" y="16" width="16" height="16"/><rect x="976" y="16" width="16" height="16"/><rect x="1008" y="16" width="16" height="16"/><rect x="1040" y="16" width="16" height="16"/><rect x="1072" y="16" width="16" height="16"/><rect x="1104" y="16" width="16" height="16"/><rect x="1136" y="16" width="16" height="16"/><rect x="1168" y="16" width="16" height="16"/>
-    </g>
-  </g>
 </svg>
