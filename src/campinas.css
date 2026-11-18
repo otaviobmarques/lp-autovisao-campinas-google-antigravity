@@ -1,8 +1,9 @@
 /* ==========================================================================
    Auto Visão Campinas · Estilos Exclusivos (DS Franquia 1.0 + DS Site 1.1)
+   Revisão Completa Anti-Overflow para todas as grades, cartões e botões
    ========================================================================== */
 
-/* Prevenção absoluta de rolagem lateral em qualquer resolução */
+/* 1. Prevenção absoluta de rolagem lateral e truncamento de colunas de grid */
 html,
 body,
 #root {
@@ -11,6 +12,113 @@ body,
   overflow-x: clip !important;
 }
 
+/* Todos os grids e filhos de grid/flex precisam de min-width: 0 para nunca estourar a coluna */
+.units,
+.grid-sv,
+.flagship-grid,
+.duty-banner,
+.schedule-grid,
+.family,
+.wizard,
+.x360-g,
+.x360-list,
+.faq-cols,
+.final .wrap,
+.ft-top,
+.lists,
+.ads-links-grid,
+.opts {
+  min-width: 0;
+}
+
+.units > *,
+.grid-sv > *,
+.flagship-grid > *,
+.duty-banner > *,
+.schedule-grid > *,
+.family > *,
+.wizard > *,
+.x360-g > *,
+.x360-list > *,
+.faq-cols > *,
+.final .wrap > *,
+.ft-top > *,
+.lists > *,
+.ads-links-grid > *,
+.opts > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Redefinir colunas de grades do site.css/matriz.css com minmax(0, 1fr) */
+.units {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.grid-sv {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.x360-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.opts {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+@media (max-width: 1100px) {
+  .units,
+  .grid-sv,
+  .x360-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .units,
+  .grid-sv,
+  .x360-list {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* 2. Botões responsivos: nunca estourar a largura do card pai */
+.btn {
+  max-width: 100%;
+  white-space: normal !important;
+  text-align: center;
+  line-height: 1.2 !important;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.unit-help {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.unit-help h3,
+.unit-help p,
+.sv h3,
+.sv p,
+.unit h3,
+.unit dd,
+.flagship-card h3,
+.flagship-card p,
+.duty-banner h3,
+.duty-banner p {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.unit-help .btn {
+  width: 100%;
+  justify-self: stretch !important;
+}
+
+/* 3. Topbar e Header perfeitamente ajustados */
 .topbar .wrap,
 .hdr .wrap {
   min-width: 0;
@@ -43,6 +151,7 @@ body,
   min-height: 42px;
   font-size: 14.5px;
   flex-shrink: 0;
+  white-space: nowrap !important;
 }
 
 @media (max-width: 1180px) {
@@ -72,7 +181,17 @@ body,
   }
 }
 
-/* Remotion Showreel Section */
+@media (max-width: 640px) {
+  .tb-r {
+    gap: 10px;
+    font-size: 12.5px;
+  }
+  .tb-area {
+    display: none !important;
+  }
+}
+
+/* 4. Remotion Showreel Section */
 .remotion-wrap {
   display: grid;
   gap: 24px;
@@ -123,7 +242,7 @@ body,
   background: #151415;
 }
 
-/* Destaque Duplo: Vistoria do DETRAN + Vistoria Cautelar */
+/* 5. Destaque Duplo: Vistoria do DETRAN + Vistoria Cautelar */
 .flagship-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -209,7 +328,7 @@ body,
   color: #fff;
 }
 
-/* Destaque Plantão Sábado até 16h */
+/* 6. Destaque Plantão Sábado até 16h */
 .duty-banner {
   position: relative;
   display: grid;
@@ -267,7 +386,7 @@ body,
   text-align: center;
 }
 
-/* Modal de Detalhes de cada Serviço */
+/* 7. Modal de Detalhes de cada Serviço */
 .svc-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -337,11 +456,11 @@ body,
 
 .svc-modal-cols {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: 24px;
 }
 
-/* Formulário de Agendamento Rápido Campinas */
+/* 8. Formulário de Agendamento Rápido Campinas */
 .schedule-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
@@ -361,7 +480,7 @@ body,
 
 .schedule-form {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -421,19 +540,350 @@ body,
   text-align: center;
 }
 
+/* ==========================================================================
+   PÁGINA DE LANDING PAGE DEDICADA POR SERVIÇO (GOOGLE ADS LPs)
+   ========================================================================== */
+.lp-banner-top {
+  background: #FFF5F5;
+  border-bottom: 1px solid #F7D4D6;
+  padding: 10px 0;
+  font-size: 14px;
+}
+
+.lp-banner-top .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 800 14px/1 var(--f-head);
+  color: var(--action);
+  background: #fff;
+  border: 1.5px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+
+.lp-back-btn:hover {
+  border-color: var(--action);
+  background: #FDECEC;
+}
+
+.ads-links-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ads-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.ads-link-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.ads-link-card b {
+  font: 800 15px/1.2 var(--f-head);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ads-link-card code {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
+  word-break: break-all;
+}
+
+/* ==========================================================================
+   BARRA MOBILE COM 3 BOTÕES (WHATSAPP, ENDEREÇOS, SERVIÇOS) + BOTTOM SHEETS
+   ========================================================================== */
+@media (max-width: 640px) {
+  .mbar {
+    grid-template-columns: 1.25fr 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .mbar button,
+  .mbar a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 52px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    font: 800 12.5px/1 var(--f-head);
+    color: var(--impact);
+    text-decoration: none;
+    background: var(--surface);
+    padding: 4px 6px;
+  }
+
+  .mbar button.active {
+    background: var(--impact);
+    border-color: var(--impact);
+    color: #fff;
+  }
+
+  .mbar a.wa {
+    flex-direction: row !important;
+    gap: 7px !important;
+    background: var(--wa) !important;
+    border-color: var(--wa) !important;
+    color: #08311a !important;
+    font-size: 14.5px !important;
+  }
+
+  .mbar a.wa .i {
+    color: #fff !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+}
+
+/* Gaveta (Bottom Sheet) Mobile e Desktop para Endereços e Resumo de Serviços */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: rgba(21, 20, 21, 0.68);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.sheet-panel {
+  width: min(640px, 100%);
+  max-height: 84vh;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  background: var(--impact);
+  color: #fff;
+}
+
+.sheet-head h3 {
+  color: #fff;
+  font-size: 19px;
+}
+
+.sheet-head small {
+  display: block;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 2px;
+}
+
+.sheet-close {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.sheet-body {
+  padding: 16px 18px 24px;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+}
+
+.sheet-unit-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  transition: border-color 0.15s;
+}
+
+.sheet-unit-item.duty {
+  border-color: var(--brand);
+  background: #FFF8F8;
+}
+
+.sheet-unit-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sheet-unit-top b {
+  font: 900 16.5px/1.2 var(--f-head);
+  color: var(--impact);
+}
+
+.sheet-unit-top span {
+  font: 800 11px/1 var(--f-head);
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--impact);
+  white-space: nowrap;
+}
+
+.sheet-unit-item.duty .sheet-unit-top span {
+  background: var(--brand);
+  color: #fff;
+}
+
+.sheet-unit-addr {
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.sheet-unit-addr small {
+  display: block;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.sheet-unit-actions {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 8px;
+}
+
+.sheet-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font: 800 13px/1 var(--f-head);
+  text-decoration: none;
+  border: 1.5px solid var(--line);
+  color: var(--impact);
+  background: #fff;
+}
+
+.sheet-btn.maps {
+  background: var(--action);
+  border-color: var(--action);
+  color: #fff;
+}
+
+.sheet-btn.wa {
+  background: var(--wa);
+  border-color: var(--wa);
+  color: #08311a;
+}
+
+.sheet-svc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  text-align: left;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.sheet-svc-item:hover {
+  border-color: var(--brand);
+  background: #FFF8F8;
+}
+
+.sheet-svc-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sheet-svc-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #FDECEC;
+  color: var(--action);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.sheet-svc-left b {
+  display: block;
+  font: 900 15.5px/1.2 var(--f-head);
+  color: var(--impact);
+}
+
+.sheet-svc-left small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 /* Responsividade Campinas */
 @media (max-width: 960px) {
   .flagship-grid,
   .duty-banner,
   .schedule-grid,
   .svc-modal-cols {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ads-links-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .schedule-form {
-    grid-template-columns: 1fr;
+  .schedule-form,
+  .ads-links-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .svc-modal-hero,
   .svc-modal-body {
@@ -449,5 +899,8 @@ body,
   }
   .duty-banner {
     padding: 22px 18px;
+  }
+  .sheet-unit-actions {
+    grid-template-columns: 1.2fr 0.9fr 0.9fr;
   }
 }

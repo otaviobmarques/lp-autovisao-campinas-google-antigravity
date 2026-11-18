@@ -23,6 +23,8 @@ export interface CampinasUnit {
 
 export interface VistoriaService {
   id: string;
+  slug: string;
+  aliases: string[];
   title: string;
   shortTitle: string;
   kicker: string;
@@ -30,6 +32,7 @@ export interface VistoriaService {
   badgeVariant?: 'red' | 'dark' | 'green';
   category: ('destaque' | 'comprar' | 'transferir' | 'avancada' | 'pesados' | 'empresas')[];
   featured?: boolean;
+  heroTheme: 'red' | 'dark';
   icon: string;
   headlineLight: string;
   headlineBold: string;
@@ -38,6 +41,8 @@ export interface VistoriaService {
   idealFor: string;
   checklist: string[];
   deliverables: string[];
+  faqs: { q: string; a: string }[];
+  keywords: string[];
   timeEstimate: string;
   whatsappMsg: string;
 }
@@ -85,7 +90,8 @@ export const CAMPINAS_UNITS: CampinasUnit[] = [
     detran: 'DETRAN-SP nº 9422',
     cnpj: '58.556.175/0001-60',
     address: 'Av. Imperatriz Leopoldina, 38 – Taquaral, Campinas/SP',
-    reference: 'Próximo ao Balão do Taquaral, subindo a Av. Imperatriz, logo após a Bono Pneus e Igreja N. Sra. das Graças.',
+    reference:
+      'Próximo ao Balão do Taquaral, subindo a Av. Imperatriz, logo após a Bono Pneus e Igreja N. Sra. das Graças.',
     hoursWeek: 'Seg. a sex.: 08h às 18h',
     hoursSat: 'Sábado: 08h às 12h',
     satCloseHour: 12,
@@ -177,21 +183,25 @@ export const CAMPINAS_UNITS: CampinasUnit[] = [
 export const VISTORIA_SERVICES: VistoriaService[] = [
   {
     id: 'vistoria-detran',
+    slug: 'vistoria-detran',
+    aliases: ['vistoria-transferencia', 'transferencia', 'detran'],
     title: 'Vistoria do DETRAN (Transferência)',
     shortTitle: 'Vistoria do DETRAN',
-    kicker: 'DESTAQUE OFICIAL · ECV CREDENCIADA DETRAN-SP',
+    kicker: 'VISTORIA DO DETRAN EM CAMPINAS · ECV CREDENCIADA',
     badge: 'Destaque · Oficial DETRAN',
     badgeVariant: 'dark',
     category: ['destaque', 'transferir'],
     featured: true,
+    heroTheme: 'red',
     icon: 'file',
-    headlineLight: 'Vai transferir o veículo?',
+    headlineLight: 'Vai transferir o veículo em Campinas?',
     headlineBold: 'Laudo oficial do DETRAN-SP na hora.',
     summary:
       'Etapa obrigatória exigida pelo DETRAN-SP para transferência de propriedade, mudança de município, segunda via de CRV ou alteração de características.',
     salesCopy:
       'Nossas 5 lojas em Campinas são Empresas Credenciadas de Vistoria (ECV) pelo DETRAN-SP. Realizamos a coleta óptica oficial de chassi, motor, câmbio, lacre/QR Code da placa Mercosul e itens obrigatórios de segurança com integração direta ao sistema e-CRVsp.',
-    idealFor: 'Quem comprou ou vendeu um veículo e precisa transferir o documento no DETRAN-SP sem filas e sem retrabalho.',
+    idealFor:
+      'Quem comprou ou vendeu um veículo e precisa transferir o documento no DETRAN-SP sem filas e sem retrabalho.',
     checklist: [
       'Conferência óptica e pericial da numeração de chassi e motor',
       'Validação da placa Mercosul (QR Code) ou tarjeta e lacre',
@@ -204,19 +214,42 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Registro fotográfico homologado de chassi, motor e veículo',
       'Orientação completa para concluir a transferência digital ou no Poupatempo/Despachante',
     ],
+    faqs: [
+      {
+        q: 'Qual o prazo de validade do Laudo de Vistoria de Transferência do DETRAN-SP?',
+        a: 'O laudo emitido por uma ECV credenciada pelo DETRAN-SP tem validade oficial no sistema e-CRVsp para dar entrada no processo de transferência junto ao DETRAN, Poupatempo, Despachante ou Transferência Digital.',
+      },
+      {
+        q: 'Preciso agendar ou posso ir direto a uma das 5 unidades de Campinas?',
+        a: 'Atendemos tanto por ordem de chegada quanto por horário agendado pelo WhatsApp (19) 99224-8383. Agendando pelo WhatsApp você garante atendimento prioritário imediato.',
+      },
+      {
+        q: 'Quais itens reprovam na Vistoria de Transferência do DETRAN?',
+        a: 'Pneus carecas (abaixo do TWI), lâmpadas queimadas (farol, seta, freio, ré, placa), trincas no para-brisa na área de visão do motorista, películas irregulares, falta de estepe/macaco/chave de roda ou divergência na numeração de chassi e motor.',
+      },
+    ],
+    keywords: [
+      'vistoria detran campinas',
+      'vistoria de transferencia campinas',
+      'laudo transferencia detran sp campinas',
+      'ecv credenciada detran campinas',
+    ],
     timeEstimate: '20 a 30 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria do DETRAN (Transferência).',
+      'Olá! Vim pelo anúncio da Vistoria do DETRAN (Transferência) em Campinas e gostaria de saber o valor e agendar.',
   },
   {
     id: 'vistoria-cautelar',
+    slug: 'vistoria-cautelar',
+    aliases: ['cautelar', 'laudo-cautelar'],
     title: 'Vistoria Cautelar Completa',
     shortTitle: 'Vistoria Cautelar',
-    kicker: 'DESTAQUE · COMPRA E VENDA SEGURA',
+    kicker: 'VISTORIA CAUTELAR EM CAMPINAS · COMPRA E VENDA SEGURA',
     badge: 'Mais Procurada',
     badgeVariant: 'red',
     category: ['destaque', 'comprar'],
     featured: true,
+    heroTheme: 'red',
     icon: 'search',
     headlineLight: 'Quem você ama merece',
     headlineBold: 'um carro vistoriado antes da compra.',
@@ -224,7 +257,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Descubra se o veículo tem passagem por leilão, sinistro, batida estrutural, chassi adulterado ou restrições judiciais antes de fechar negócio.',
     salesCopy:
       'O test-drive mostra como o carro anda hoje; a Vistoria Cautelar revela o que ele já viveu. Analisamos a integridade estrutural (longarinas, colunas, painel frontal/traseiro, assoalho), autenticidade de chassi/motor/câmbio/vidros e cruzamos mais de 40 bases nacionais de leilão, sinistro, roubo/furto e gravames.',
-    idealFor: 'Compradores de carros usados/seminovos, vendedores particulares que querem valorizar o carro e lojistas na avaliação de troca.',
+    idealFor:
+      'Compradores de carros usados/seminovos, vendedores particulares que querem valorizar o carro e lojistas na avaliação de troca.',
     checklist: [
       'Estrutura completa: longarinas dianteiras e traseiras, colunas A/B/C, caixas de ar e teto',
       'Identificação pericial: chassi, motor, câmbio, gravação dos vidros e etiquetas originais (ETA)',
@@ -237,19 +271,38 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Dossiê de Pesquisa Veicular Completa (Leilão, Sinistro, Débitos e Restrições)',
       'Parecer técnico claro e imparcial explicado pelo vistoriador',
     ],
+    faqs: [
+      {
+        q: 'A Vistoria Cautelar descobre se o carro já foi batido ou se é de leilão?',
+        a: 'Sim! Nossos peritos inspecionam fisicamente longarinas, colunas, caixas de roda, painel corta-fogo, pontos de solda originais e selantes de fábrica, além de consultar bases nacionais de leilão e sinistro.',
+      },
+      {
+        q: 'A Vistoria Cautelar vale para transferir o carro no DETRAN?',
+        a: 'A Cautelar é focada em estrutura e histórico para compra segura. Se você também já vai transferir o veículo, peça nosso Combo Cautelar + Transferência DETRAN no mesmo atendimento!',
+      },
+    ],
+    keywords: [
+      'vistoria cautelar campinas',
+      'laudo cautelar campinas',
+      'pericia cautelar veicular campinas',
+      'onde fazer vistoria cautelar em campinas',
+    ],
     timeEstimate: '35 a 45 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria Cautelar.',
+      'Olá! Vim pelo anúncio da Vistoria Cautelar em Campinas e gostaria de saber o valor e agendar.',
   },
   {
     id: 'vistoria-360',
+    slug: 'vistoria-360',
+    aliases: ['360', 'vistoria-360-plus', 'vistoria-360-max'],
     title: 'Nossa Vistoria 360º® (360º®, Plus e Max)',
     shortTitle: 'Nossa Vistoria 360º®',
-    kicker: 'EXCLUSIVA AUTO VISÃO · +180 ITENS AVALIADOS',
+    kicker: 'EXCLUSIVA AUTO VISÃO EM CAMPINAS · +180 ITENS AVALIADOS',
     badge: 'Exclusiva Auto Visão®',
     badgeVariant: 'red',
     category: ['destaque', 'comprar', 'avancada'],
     featured: true,
+    heroTheme: 'dark',
     icon: 'orbit',
     headlineLight: 'O carro visto por inteiro:',
     headlineBold: 'mais de 180 itens no mesmo laudo.',
@@ -257,7 +310,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'A evolução da vistoria cautelar que só a Rede Auto Visão oferece: Estrutura + Histórico + Pintura peça a peça + Vídeo de Funcionamento (Plus) + Scanner de Módulos e Certificado do Carro (Max).',
     salesCopy:
       'Por que contratar análises separadas quando você pode ter um raio-x de 360 graus? A Nossa Vistoria 360º® avalia mais de 180 pontos do veículo. Na versão Plus, você recebe no WhatsApp o vídeo do carro funcionando; na versão Max, incluímos leitura eletrônica por scanner de todos os módulos e o exclusivo Certificado do Carro Auto Visão.',
-    idealFor: 'Quem quer máxima segurança na compra de um seminovo, quem compra à distância ou quem deseja vender mais rápido pelo valor justo.',
+    idealFor:
+      'Quem quer máxima segurança na compra de um seminovo, quem compra à distância ou quem deseja vender mais rápido pelo valor justo.',
     checklist: [
       'Tudo da Vistoria Cautelar (Estrutura + Chassi/Motor/Vidros + Histórico de Leilão e Sinistro)',
       'Medição micrométrica de pintura peça a peça (mapa visual de retoques, repintura e massa)',
@@ -270,18 +324,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Vídeo HD no WhatsApp (Plus/Max) + Relatório de Scanner de Módulos (Max)',
       'Selo e Certificado Oficial do Carro Auto Visão 360º®',
     ],
+    faqs: [
+      {
+        q: 'Qual a diferença entre a Vistoria 360º®, 360º® Plus e 360º® Max?',
+        a: 'A 360º® avalia estrutura, histórico e pintura peça a peça (+180 itens). A 360º® Plus adiciona o vídeo completo de funcionamento enviado no seu WhatsApp. A 360º® Max adiciona o diagnóstico eletrônico por scanner (módulos e KM) e o Certificado Oficial do Carro.',
+      },
+    ],
+    keywords: [
+      'vistoria 360 campinas',
+      'vistoria 360 auto visao',
+      'vistoria completa 180 itens campinas',
+    ],
     timeEstimate: '45 a 60 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar a Nossa Vistoria 360º®.',
+      'Olá! Vim pelo anúncio da Nossa Vistoria 360º® em Campinas e gostaria de saber o valor e agendar.',
   },
   {
     id: 'vistoria-pintura',
+    slug: 'vistoria-pintura',
+    aliases: ['laudo-pintura', 'pintura'],
     title: 'Vistoria de Pintura Peça a Peça',
     shortTitle: 'Vistoria de Pintura',
-    kicker: 'MEDIÇÃO MICROMÉTRICA · ESTÉTICA E FUNILARIA',
+    kicker: 'VISTORIA DE PINTURA EM CAMPINAS · MEDIÇÃO MICROMÉTRICA',
     badge: 'Mapa em µm',
     badgeVariant: 'red',
     category: ['comprar', 'avancada'],
+    heroTheme: 'red',
     icon: 'paint',
     headlineLight: 'Olhar treinado e medidor digital:',
     headlineBold: 'descubra repinturas e massa plástica.',
@@ -289,7 +357,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Medição eletrônica da espessura da camada de tinta (em micrômetros - µm) em cada painel externo para revelar retoques, segunda mão de verniz ou reparos com massa.',
     salesCopy:
       'Muitas vezes uma colisão leve ou média não atinge a longarina, mas deixa portas, para-lamas, capô ou tampa traseira cheios de massa plástica que trinca com o tempo e desvaloriza o veículo na revenda. Medimos peça por peça com equipamento digital calibrado e entregamos o mapa colorido da pintura.',
-    idealFor: 'Compradores exigentes com estética e originalidade de fábrica, carros seminovos na garantia e avaliação de revenda.',
+    idealFor:
+      'Compradores exigentes com estética e originalidade de fábrica, carros seminovos na garantia e avaliação de revenda.',
     checklist: [
       'Medição digital em micrômetros (µm) no capô, teto, tampa do porta-malas, portas, laterais e para-lamas',
       'Identificação de pintura original de fábrica (~90 a 140 µm) vs. repintura (>180 µm) vs. massa plástica (>300 µm)',
@@ -300,18 +369,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Mapa gráfico peça a peça com a espessura medida em cada painel',
       'Classificação clara: Pintura Original, Repintura Estética ou Reparo com Massa/Funilaria',
     ],
+    faqs: [
+      {
+        q: 'O aparelho de medição de pintura risca ou danifica o verniz do carro?',
+        a: 'De forma alguma! Utilizamos medidores digitais por indução magnética/correntes parasitas com ponteira macia calibrada que apenas encosta suavemente na superfície.',
+      },
+    ],
+    keywords: [
+      'vistoria de pintura campinas',
+      'laudo de pintura automotiva campinas',
+      'medicao espessura tinta carro campinas',
+    ],
     timeEstimate: '25 a 35 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria de Pintura.',
+      'Olá! Vim pelo anúncio da Vistoria de Pintura em Campinas e gostaria de saber o valor e agendar.',
   },
   {
     id: 'vistoria-km-scanner',
+    slug: 'vistoria-km-scanner',
+    aliases: ['laudo-scanner', 'vistoria-km', 'scanner-modulo'],
     title: 'Vistoria de KM com Scanner de Módulo',
     shortTitle: 'KM com Scanner de Módulo',
-    kicker: 'DIAGNÓSTICO ELETRÔNICO OBD-II · ANTI-FRAUDE DE KM',
+    kicker: 'SCANNER DE MÓDULO E KM EM CAMPINAS · OBD-II',
     badge: 'Auditoria de KM',
     badgeVariant: 'dark',
     category: ['comprar', 'avancada'],
+    heroTheme: 'dark',
     icon: 'gauge',
     headlineLight: 'A quilometragem do painel é real?',
     headlineBold: 'O scanner lê a memória dos módulos.',
@@ -319,7 +402,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Leitura eletrônica profunda via porta OBD-II de todos os módulos do veículo para auditar a quilometragem real gravada nas centrais e detectar códigos de falha (DTC) apagados no painel.',
     salesCopy:
       'Adulterar o hodômetro do painel é uma das fraudes mais comuns no mercado de usados, mas a quilometragem real costuma ficar gravada nos módulos de injeção (ECU), câmbio automático (TCU), freios ABS, airbag e chave/BCM. Nosso scanner automotivo compara todos os módulos eletrônicos e revela avarias ocultas antes que elas virem um prejuízo de milhares de reais.',
-    idealFor: 'Qualquer compra de veículo seminovo ou usado, especialmente carros modernos, turbo, automáticos ou diesel.',
+    idealFor:
+      'Qualquer compra de veículo seminovo ou usado, especialmente carros modernos, turbo, automáticos ou diesel.',
     checklist: [
       'Cruzamento da quilometragem gravada nos módulos de Motor (ECU), Câmbio (TCU), ABS, Airbag e Painel (IPC)',
       'Varredura de códigos de falha (DTC) presentes e históricos na injeção eletrônica e transmissão',
@@ -330,19 +414,33 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Relatório de Diagnóstico Eletrônico com status de cada módulo (Motor, Câmbio, ABS, Airbag)',
       'Comparativo técnico de Quilometragem Painel x Módulos Eletrônicos',
     ],
+    faqs: [
+      {
+        q: 'Como o scanner descobre se a quilometragem foi voltada?',
+        a: 'Mesmo quando alguém altera o número mostrado no painel de instrumentos, outros módulos (como câmbio automático, freios ABS, injeção ou chave) costumam manter o registro real de quilometragem ou horas de funcionamento, permitindo identificar a divergência.',
+      },
+    ],
+    keywords: [
+      'vistoria de km campinas',
+      'scanner automotivo quilometragem real campinas',
+      'descobrir km adulterado campinas',
+    ],
     timeEstimate: '25 a 35 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria de KM com Scanner de Módulo.',
+      'Olá! Vim pelo anúncio da Vistoria de KM com Scanner de Módulo em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-bateria-eletricos',
+    slug: 'vistoria-bateria-eletricos',
+    aliases: ['vistoria-eletricos-hibridos', 'carros-eletricos', 'aviloo'],
     title: 'Vistoria de Bateria para Elétricos e Híbridos',
     shortTitle: 'Bateria Elétricos e Híbridos',
-    kicker: 'NOVA GERAÇÃO · CERTIFICAÇÃO INDEPENDENTE AVILOO',
+    kicker: 'ELÉTRICOS E HÍBRIDOS EM CAMPINAS · CERTIFICADO AVILOO',
     badge: 'Certificado AVILOO',
     badgeVariant: 'green',
     category: ['destaque', 'comprar', 'avancada'],
     featured: true,
+    heroTheme: 'dark',
     icon: 'battery',
     headlineLight: 'Vai comprar um elétrico ou híbrido?',
     headlineBold: 'Teste a saúde real da bateria de tração.',
@@ -350,7 +448,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Vistoria especializada para veículos elétricos (BEV) e híbridos (HEV/PHEV): mede o Estado de Saúde (SoH) da bateria de alta tensão com certificado independente AVILOO, além de módulos e estrutura.',
     salesCopy:
       'A bateria de tração representa até 50% do valor de um carro elétrico ou híbrido. Na Auto Visão Campinas, utilizamos tecnologia homologada internacionalmente (AVILOO) para auditar a saúde real das células, histórico de recargas rápidas, equilíbrio térmico de tensão e integridade do cofre inferior da bateria contra impactos de solo.',
-    idealFor: 'Compradores, vendedores e lojistas de veículos elétricos e híbridos (BYD, GWM, Volvo, Toyota Corolla/RAV4 Hybrid, Porsche, BMW, Tesla, Caoa Chery).',
+    idealFor:
+      'Compradores, vendedores e lojistas de veículos elétricos e híbridos (BYD, GWM, Volvo, Toyota Corolla/RAV4 Hybrid, Porsche, BMW, Tesla, Caoa Chery).',
     checklist: [
       'Diagnóstico do Estado de Saúde (SoH - State of Health) da bateria de alta tensão com certificação AVILOO',
       'Leitura de balanceamento de tensão das células, temperatura interna e histórico de degradação',
@@ -362,26 +461,41 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Certificado Independente de Saúde da Bateria (AVILOO Battery Certificate)',
       'Laudo Estrutural, Histórico e Eletrônico específico para Elétricos e Híbridos',
     ],
+    faqs: [
+      {
+        q: 'Quais marcas de carros elétricos e híbridos vocês atendem em Campinas?',
+        a: 'Atendemos todas as principais marcas do mercado: BYD (Dolphin, Song Plus, Seal, Yuan), GWM (Haval H6, Ora 03), Volvo (XC40, EX30, XC60), Toyota (Corolla e Corolla Cross Hybrid), Caoa Chery, BMW, Audi, Porsche, Mini e Renault.',
+      },
+    ],
+    keywords: [
+      'vistoria carros eletricos campinas',
+      'vistoria hibridos campinas',
+      'teste bateria carro eletrico aviloo campinas',
+    ],
     timeEstimate: '45 a 60 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria de Bateria para Veículo Elétrico / Híbrido.',
+      'Olá! Vim pelo anúncio da Vistoria de Bateria para Elétricos e Híbridos em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-pesados',
+    slug: 'vistoria-pesados',
+    aliases: ['vistoria-veiculos-pesados', 'caminhoes', 'onibus'],
     title: 'Vistoria em Veículos Pesados',
     shortTitle: 'Veículos Pesados',
-    kicker: 'CAMINHÕES, ÔNIBUS, CARRETAS E VANS · LINHA PESADA',
+    kicker: 'VISTORIA EM VEÍCULOS PESADOS EM CAMPINAS · CAMINHÕES E ÔNIBUS',
     badge: 'Frotas & Pesados',
     badgeVariant: 'dark',
     category: ['pesados', 'transferir', 'empresas'],
+    heroTheme: 'red',
     icon: 'truck',
     headlineLight: 'Caminhões, ônibus, carretas e vans:',
     headlineBold: 'rigor técnico para quem move cargas.',
     summary:
       'Vistoria de Transferência (DETRAN-SP), Cautelar e de Frota para caminhões, cavalos mecânicos, semirreboques, carretas, ônibus, micro-ônibus e utilitários pesados.',
     salesCopy:
-      'Um veículo pesado parado ou com problema de numeração de chassi/motor/eixo gera prejuízo diário altíssimo. Nossas equipes em Campinas são especializadas na identificação de longarinas de caminhões, plaquetas de cabine, numeração de bloco de motor diesel, implementos rodoviários (ANTT/inmetro), além de pesquisa completa de leilão, sinistro e gravames.',
-    idealFor: 'Transportadoras, caminhoneiros autônomos, frotistas, concessionárias de pesados e empresas de ônibus/fretamento.',
+      'Um veículo pesado parado ou com problema de numeração de chassi/motor/eixo gera prejuízo diário altíssimo. Nossas equipes em Campinas são especializadas na identificação de longarinas de caminhões, plaquetas de cabine, numeração de bloco de motor diesel, implementos rodoviários (ANTT/Inmetro), além de pesquisa completa de leilão, sinistro e gravames.',
+    idealFor:
+      'Transportadoras, caminhoneiros autônomos, frotistas, concessionárias de pesados e empresas de ônibus/fretamento.',
     checklist: [
       'Identificação pericial de chassi em longarina, cabine, motor diesel, caixa de câmbio e eixos',
       'Verificação de implementos rodoviários, baús, carrocerias, quinta roda e semirreboques',
@@ -393,18 +507,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Laudo Oficial DETRAN-SP (Transferência/Regularização) ou Laudo Cautelar Pesados',
       'Relatório fotográfico completo de chassi, motor, plaquetas, pneus e implemento',
     ],
+    faqs: [
+      {
+        q: 'Vocês fazem vistoria em caminhões, carretas e frotas no pátio da empresa em Campinas?',
+        a: 'Sim! Além do atendimento nas unidades compatíveis com o porte do veículo, realizamos atendimento corporativo para frotas e transportadoras em Campinas e região metropolitana. Chame no WhatsApp (19) 99224-8383.',
+      },
+    ],
+    keywords: [
+      'vistoria caminhao campinas',
+      'vistoria veiculos pesados campinas',
+      'vistoria cautelar caminhao campinas',
+    ],
     timeEstimate: '40 a 60 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria em Veículo Pesado (Caminhão / Ônibus / Van).',
+      'Olá! Vim pelo anúncio de Vistoria em Veículos Pesados (Caminhão / Ônibus / Van) em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-financeira',
+    slug: 'vistoria-financeira',
+    aliases: ['vistoria-consorcios', 'financeira', 'consorcio'],
     title: 'Vistoria para Financeira e Consórcio',
     shortTitle: 'Vistoria para Financeira',
-    kicker: 'CRÉDITO AUTOMOTIVO · ALIENAÇÃO E CONSÓRCIOS',
+    kicker: 'VISTORIA PARA FINANCEIRA E CONSÓRCIO EM CAMPINAS',
     badge: 'Liberação Rápida',
     badgeVariant: 'dark',
     category: ['empresas', 'comprar'],
+    heroTheme: 'dark',
     icon: 'building',
     headlineLight: 'Financiamento, consórcio ou refinanciamento:',
     headlineBold: 'laudo ágil para liberar o seu crédito.',
@@ -412,7 +540,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Vistoria técnica exigida por bancos, financeiras, cooperativas de crédito e administradoras de consórcio para comprovar a existência, conservação e regularidade do bem dado em garantia.',
     salesCopy:
       'Quando você contempla uma carta de consórcio, financia um usado ou faz refinanciamento (crédito com garantia de veículo), a instituição financeira exige um laudo credenciado que ateste o valor de mercado, autenticidade de chassi/motor e ausência de sinistro grave. Emitimos o laudo padronizado com agilidade para destravar o pagamento ao vendedor.',
-    idealFor: 'Contemplados em consórcios (todos os bancos e administradoras), compradores via financiamento bancário, cooperativas (Sicoob, Sicredi) e lojas multimarcas.',
+    idealFor:
+      'Contemplados em consórcios (todos os bancos e administradoras), compradores via financiamento bancário, cooperativas (Sicoob, Sicredi) e lojas multimarcas.',
     checklist: [
       'Autenticidade de chassi, motor e vidros conforme exigência do banco/consórcio',
       'Avaliação do estado geral de conservação interna, externa e pneus',
@@ -422,18 +551,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
     deliverables: [
       'Laudo de Avaliação / Constatação homologado para envio imediato ao banco, financeira ou consórcio',
     ],
+    faqs: [
+      {
+        q: 'O laudo sai no mesmo dia para enviar ao banco ou administradora de consórcio?',
+        a: 'Sim! O laudo é emitido na hora, logo após a conclusão da vistoria em qualquer uma das nossas 5 unidades em Campinas.',
+      },
+    ],
+    keywords: [
+      'vistoria para consorcio campinas',
+      'vistoria para financeira campinas',
+      'laudo avaliacao consorcio veiculo campinas',
+    ],
     timeEstimate: '25 a 35 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e preciso fazer uma Vistoria para Financeira / Consórcio.',
+      'Olá! Vim pelo anúncio de Vistoria para Financeira / Consórcio em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-seguradora',
+    slug: 'vistoria-seguradora',
+    aliases: ['vistoria-previa', 'seguradora', 'seguro'],
     title: 'Vistoria para Seguradora (Vistoria Prévia)',
     shortTitle: 'Vistoria para Seguradora',
-    kicker: 'SEGURO AUTO · CONTRATAÇÃO E ENDOSSO DE APÓLICE',
+    kicker: 'VISTORIA PRÉVIA PARA SEGURADORA EM CAMPINAS',
     badge: 'Vistoria Prévia',
     badgeVariant: 'dark',
     category: ['empresas', 'comprar'],
+    heroTheme: 'red',
     icon: 'shield',
     headlineLight: 'Vai contratar ou renovar o seguro?',
     headlineBold: 'Vistoria prévia rápida e sem burocracia.',
@@ -441,7 +584,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Inspeção prévia solicitada por seguradoras e corretores para aceitação de risco, contratação de seguro novo, troca de veículo (endosso) ou inclusão de coberturas.',
     salesCopy:
       'Garanta a aprovação da sua apólice sem atrasos. Registramos com precisão chassi, motor, quilometragem, estado da lataria, vidros, faróis, pneus e acessórios instalados (multimídia, rodas, blindagem, kit gás), documentando eventuais avarias pré-existentes com transparência técnica.',
-    idealFor: 'Segurados, corretores de seguros em Campinas e frotas empresariais em processo de cotação ou renovação.',
+    idealFor:
+      'Segurados, corretores de seguros em Campinas e frotas empresariais em processo de cotação ou renovação.',
     checklist: [
       'Conferência de chassi, motor, placa e numeração dos vidros (para cobertura de vidros)',
       'Mapeamento de estado da carroceria, pintura, para-choques, faróis, lanternas e retrovisores',
@@ -451,18 +595,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
     deliverables: [
       'Relatório de Vistoria Prévia com dossiê fotográfico completo para a seguradora/corretor',
     ],
+    faqs: [
+      {
+        q: 'Posso fazer a Vistoria Prévia de seguro aos sábados em Campinas?',
+        a: 'Sim! Todas as 5 unidades abrem aos sábados das 08h às 12h, e a unidade Ponte Preta (Abolição) funciona em plantão até as 16h.',
+      },
+    ],
+    keywords: [
+      'vistoria previa seguro campinas',
+      'vistoria para seguradora campinas',
+      'inspecao veicular seguro auto campinas',
+    ],
     timeEstimate: '20 a 30 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria Prévia para Seguradora.',
+      'Olá! Vim pelo anúncio de Vistoria Prévia para Seguradora em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-protecao-automotiva',
+    slug: 'vistoria-protecao-automotiva',
+    aliases: ['vistoria-protecao-veicular', 'protecao-veicular', 'protecao-automotiva'],
     title: 'Vistoria para Proteção Automotiva',
     shortTitle: 'Proteção Automotiva',
-    kicker: 'ASSOCIAÇÕES, COOPERATIVAS E BENEFÍCIOS VEICULARES',
+    kicker: 'VISTORIA PARA PROTEÇÃO AUTOMOTIVA EM CAMPINAS',
     badge: 'Adesão & Entrada',
     badgeVariant: 'red',
     category: ['empresas'],
+    heroTheme: 'dark',
     icon: 'shield',
     headlineLight: 'Adesão segura e auditável para',
     headlineBold: 'associações de proteção veicular.',
@@ -470,7 +628,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Laudo técnico de entrada, constatação e reativação para associações de proteção automotiva, clubes de benefícios e cooperativas em Campinas e região.',
     salesCopy:
       'Evite fraudes de sinistro pré-existente e proteja a saúde financeira da associação e do associado. Realizamos a vistoria completa de entrada com fotos datadas e geolocalizadas, conferência de chassi/motor, estado de pneus, vidros, funcionamento básico e registro de avarias anteriores à adesão.',
-    idealFor: 'Associações de proteção veicular, consultores regionais e motoristas de aplicativo/particulares aderindo à proteção automotiva.',
+    idealFor:
+      'Associações de proteção veicular, consultores regionais e motoristas de aplicativo/particulares aderindo à proteção automotiva.',
     checklist: [
       'Identificação completa do veículo (chassi, motor, placa Mercosul, CRLV e hodômetro)',
       'Registro fotográfico auditável em 360º com data, hora e identificação da unidade',
@@ -480,18 +639,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
     deliverables: [
       'Laudo de Adesão / Proteção Veicular em PDF + Galeria Fotográfica Auditável',
     ],
+    faqs: [
+      {
+        q: 'Temos uma associação de proteção veicular em Campinas. Vocês fazem convênio corporativo?',
+        a: 'Sim! Cadastramos associações, cooperativas e frotas com fluxo padronizado de atendimento nas 5 unidades de Campinas. Fale com nossa central pelo WhatsApp (19) 99224-8383.',
+      },
+    ],
+    keywords: [
+      'vistoria protecao veicular campinas',
+      'vistoria protecao automotiva campinas',
+      'laudo adesao associacao veicular campinas',
+    ],
     timeEstimate: '20 a 30 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria para Proteção Automotiva.',
+      'Olá! Vim pelo anúncio de Vistoria para Proteção Automotiva em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-patio-publico',
+    slug: 'vistoria-patio-publico',
+    aliases: ['patio-publico', 'liberacao-patio'],
     title: 'Vistoria em Pátio Público',
     shortTitle: 'Vistoria em Pátio Público',
-    kicker: 'LIBERAÇÃO ADMINISTRATIVA · PERÍCIA EXTERNA E PÁTIOS',
+    kicker: 'VISTORIA EM PÁTIO PÚBLICO EM CAMPINAS · LIBERAÇÃO E PERÍCIA',
     badge: 'Atendimento em Pátio',
     badgeVariant: 'dark',
     category: ['transferir', 'empresas'],
+    heroTheme: 'dark',
     icon: 'pin',
     headlineLight: 'Veículo recolhido em pátio público?',
     headlineBold: 'Vistoria técnica para liberação e regularização.',
@@ -499,7 +672,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Realização de vistoria técnica oficial para veículos apreendidos ou recolhidos em pátios públicos (EMDEC, DER, DETRAN, PRF/PM) que exigem laudo ECV para desbloqueio ou liberação.',
     salesCopy:
       'Quando um veículo é recolhido ao pátio por pendência documental, infração ou bloqueio administrativo, o órgão de trânsito frequentemente exige uma vistoria ECV credenciada para atestar a regularidade de chassi, motor e itens de segurança antes da liberação ou baixa de bloqueio. Nossa equipe orienta todo o trâmite em Campinas para você retirar o veículo com rapidez.',
-    idealFor: 'Proprietários, despachantes, advogados, seguradoras e financeiras com veículos retidos em pátios públicos de Campinas e região.',
+    idealFor:
+      'Proprietários, despachantes, advogados, seguradoras e financeiras com veículos retidos em pátios públicos de Campinas e região.',
     checklist: [
       'Orientação prévia sobre ofícios, taxas e requisitos exigidos pelo DETRAN-SP / órgão gestor do pátio',
       'Coleta e validação de chassi, motor, agregados e placas segundo as normas vigentes',
@@ -509,18 +683,32 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
     deliverables: [
       'Laudo Oficial ECV Credenciada DETRAN-SP válido para processos de liberação de pátio e desbloqueio',
     ],
+    faqs: [
+      {
+        q: 'Como solicitar a vistoria para um veículo que está no pátio em Campinas?',
+        a: 'Chame nossa central no WhatsApp (19) 99224-8383 informando a placa do veículo e em qual pátio ele se encontra. Nossa equipe orienta os documentos necessários e agenda o procedimento.',
+      },
+    ],
+    keywords: [
+      'vistoria em patio publico campinas',
+      'vistoria liberacao veiculo apreendido campinas',
+      'vistoria patio emdec detran campinas',
+    ],
     timeEstimate: 'Conforme agendamento',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e preciso de informações/agendamento para Vistoria em Pátio Público.',
+      'Olá! Vim pelo anúncio de Vistoria em Pátio Público em Campinas e preciso de orientação/agendamento.',
   },
   {
     id: 'vistoria-infracao-transito',
+    slug: 'vistoria-infracao-transito',
+    aliases: ['vistoria-infracao', 'infracao-transito', 'regularizacao-detran'],
     title: 'Vistoria de Infração de Trânsito',
     shortTitle: 'Infração de Trânsito',
-    kicker: 'REGULARIZAÇÃO DETRAN-SP · BAIXA DE BLOQUEIO E RETENÇÃO',
+    kicker: 'VISTORIA DE INFRAÇÃO DE TRÂNSITO EM CAMPINAS · DETRAN-SP',
     badge: 'Regularização Oficial',
     badgeVariant: 'dark',
     category: ['transferir'],
+    heroTheme: 'red',
     icon: 'shield',
     headlineLight: 'Documento retido ou bloqueio por infração?',
     headlineBold: 'Regularize o veículo junto ao DETRAN-SP.',
@@ -528,7 +716,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Vistoria oficial exigida pelo DETRAN-SP quando o veículo sofre autuação com retenção para regularização (pneus gastos, iluminação, película insulfilm, escapamento, suspensão, recibo vencido ou sinistro).',
     salesCopy:
       'Recebeu uma autuação ou teve o licenciamento bloqueado até sanar uma irregularidade? Após corrigir o item apontado na infração, traga o veículo a qualquer uma das nossas 5 unidades em Campinas. Emitimos o laudo ECV homologado diretamente no sistema do DETRAN-SP para dar baixa na restrição e liberar o documento do seu veículo.',
-    idealFor: 'Motoristas que precisam dar baixa em bloqueio administrativo, infração de equipamento obrigatório, caracterização ou recibo vencido.',
+    idealFor:
+      'Motoristas que precisam dar baixa em bloqueio administrativo, infração de equipamento obrigatório, caracterização ou recibo vencido.',
     checklist: [
       'Conferência do item específico que gerou a autuação (iluminação, pneus, vidros/películas, escapamento, suspensão, cor)',
       'Inspeção completa de todos os equipamentos obrigatórios de segurança exigidos pelo CONTRAN',
@@ -538,19 +727,33 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
     deliverables: [
       'Laudo Oficial ECV de Regularização transmitido eletronicamente ao DETRAN-SP',
     ],
+    faqs: [
+      {
+        q: 'O que preciso fazer antes de levar o veículo para a Vistoria de Infração de Trânsito?',
+        a: 'Primeiro, corrija o item que motivou a autuação (por exemplo: trocar os pneus gastos, substituir lâmpadas queimadas ou remover película irregular) e traga o veículo com o CRLV e CNH em uma de nossas 5 lojas.',
+      },
+    ],
+    keywords: [
+      'vistoria de infracao de transito campinas',
+      'vistoria desbloqueio documento retido detran campinas',
+      'vistoria regularizacao detran campinas',
+    ],
     timeEstimate: '20 a 30 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e preciso fazer uma Vistoria de Infração de Trânsito / Regularização.',
+      'Olá! Vim pelo anúncio de Vistoria de Infração de Trânsito / Regularização em Campinas e gostaria de agendar.',
   },
   {
     id: 'vistoria-premium',
+    slug: 'vistoria-premium',
+    aliases: ['premium', 'vistoria-exclusive'],
     title: 'Vistoria Premium (Veículos Acima de R$ 200 mil)',
     shortTitle: 'Vistoria Premium',
-    kicker: 'ALTO PADRÃO, LUXO E SUPERESPORTIVOS · ANÁLISE COMPLETA',
+    kicker: 'VISTORIA PREMIUM EM CAMPINAS · ALTO PADRÃO E SUPERESPORTIVOS',
     badge: 'Acima de R$ 200 mil',
     badgeVariant: 'red',
     category: ['destaque', 'comprar', 'avancada'],
     featured: true,
+    heroTheme: 'dark',
     icon: 'star',
     headlineLight: 'Carro de alto valor pede',
     headlineBold: 'olhar cirúrgico do motor à estrutura.',
@@ -558,7 +761,8 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'A inspeção mais rigorosa do mercado para veículos premium (acima de R$ 200 mil) e de nicho/coleção (Exclusive acima de R$ 400 mil): une Cautelar + Pintura + Scanner de Módulos + Avaliação Mecânica Completa.',
     salesCopy:
       'Em veículos de luxo, blindados, importados ou esportivos, qualquer reparo oculto em motor, câmbio automatizado, suspensão pneumática, módulos eletrônicos ou pintura especial custa dezenas de milhares de reais. A Vistoria Premium entrega um dossiê completo: análise estrutural, pintura peça a peça em µm, leitura profunda por scanner, avaliação mecânica detalhada e histórico completo.',
-    idealFor: 'Compradores e vendedores de veículos premium, importados, SUVs de luxo, blindados e esportivos acima de R$ 200 mil (e modalidade Exclusive in loco para veículos acima de R$ 400 mil).',
+    idealFor:
+      'Compradores e vendedores de veículos premium, importados, SUVs de luxo, blindados e esportivos acima de R$ 200 mil (e modalidade Exclusive in loco para veículos acima de R$ 400 mil).',
     checklist: [
       'Avaliação Mecânica Completa: motor, câmbio, arrefecimento, freios, direção e conjunto de suspensão',
       'Leitura eletrônica completa via Scanner de alta precisão em todas as centrais e auditoria de KM real',
@@ -570,11 +774,36 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
       'Dossiê Executivo Vistoria Premium (Estrutura + Pintura + Scanner + Laudo Mecânico + Histórico)',
       'Atendimento prioritário nas unidades de Campinas ou modalidade Exclusive in loco (sob consulta)',
     ],
+    faqs: [
+      {
+        q: 'Qual a diferença entre a Vistoria Premium e a Vistoria Exclusive?',
+        a: 'A Vistoria Premium é voltada para veículos acima de R$ 200 mil e une estrutura, pintura, scanner e análise mecânica completa. A modalidade Exclusive atende superesportivos e veículos de nicho acima de R$ 400 mil com perícia in loco (investimento de 1% da FIPE).',
+      },
+    ],
+    keywords: [
+      'vistoria premium campinas',
+      'vistoria carros de luxo campinas',
+      'pre compra carros importados campinas',
+    ],
     timeEstimate: '60 a 90 minutos',
     whatsappMsg:
-      'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma Vistoria Premium (veículo acima de R$ 200 mil).',
+      'Olá! Vim pelo anúncio da Vistoria Premium (veículo acima de R$ 200 mil) em Campinas e gostaria de agendar.',
   },
 ];
+
+export const findServiceBySlug = (rawSlug: string | null | undefined): VistoriaService | null => {
+  if (!rawSlug) return null;
+  const clean = rawSlug
+    .replace(/^\/+|\/+$/g, '')
+    .toLowerCase()
+    .trim();
+  if (!clean) return null;
+  return (
+    VISTORIA_SERVICES.find(
+      (s) => s.slug === clean || s.id === clean || s.aliases.includes(clean)
+    ) || null
+  );
+};
 
 export const FAQ_ITEMS = [
   {
