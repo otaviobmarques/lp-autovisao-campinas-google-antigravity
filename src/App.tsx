@@ -1001,7 +1001,7 @@ export function App() {
                 <div className="sec-head center">
                   <span className="kicker">Nossos Serviços em Campinas</span>
                   <h2 className="h2">
-                    <span className="lt">As 4 vistorias que</span> mais protegem o seu veículo
+                    <span className="lt">Qual vistoria você</span> precisa fazer hoje?
                   </h2>
                   <p className="lead">
                     Escolha abaixo para agendar direto no WhatsApp ou abrir a página com todos os
