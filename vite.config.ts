@@ -9,7 +9,10 @@ function trackingHtmlPlugin(mode: string): Plugin {
     transformIndexHtml(html) {
       if (html.includes('data-av-tracking="ids"')) return html;
       const snippets = renderTrackingSnippets(resolveTrackingIds(loadEnv(mode, process.cwd(), 'VITE_')));
-      let out = html.replace('<head>', `<head>\n${snippets.head}`);
+      const charset = '<meta charset="utf-8" />';
+      let out = html.includes(charset)
+        ? html.replace(charset, `${charset}\n${snippets.head}`)
+        : html.replace('<head>', `<head>\n${charset}\n${snippets.head}`);
       if (snippets.bodyStart) out = out.replace('<body>', `<body>\n${snippets.bodyStart}`);
       return out;
     },

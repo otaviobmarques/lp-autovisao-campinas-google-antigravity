@@ -13,19 +13,7 @@ import {
   findServiceBySlug,
   VistoriaService,
 } from './data/campinasData';
-
-const SITELINK_SECTIONS: Record<string, string> = {
-  'sobre-nos': 'sobre-nos',
-  sobre: 'sobre-nos',
-  'nossos-servicos': 'nossos-servicos',
-  servicos: 'nossos-servicos',
-  'nossas-lojas': 'nossas-lojas',
-  lojas: 'nossas-lojas',
-  unidades: 'nossas-lojas',
-  'nosso-contato': 'nosso-contato',
-  contato: 'nosso-contato',
-  agendamento: 'nosso-contato',
-};
+import { SITELINK_SECTIONS, seoForPath } from './seo/pages';
 
 const TOP_4_IDS = [
   'vistoria-detran',
@@ -182,23 +170,22 @@ export function App() {
 
   // Dynamic SEO Title & Meta Description for Google Ads Quality Score
   useEffect(() => {
-    const descMeta = document.querySelector('meta[name="description"]');
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (activeLpService) {
-      const title = `${activeLpService.title} em Campinas | 5 Lojas DETRAN-SP | Auto Visão®`;
-      document.title = title;
-      if (descMeta) {
-        descMeta.setAttribute(
-          'content',
-          `${activeLpService.title} em Campinas/SP: ${activeLpService.summary} 5 lojas credenciadas pelo DETRAN-SP. Agende no WhatsApp (19) 99224-8383!`
-        );
-      }
-      if (ogTitle) ogTitle.setAttribute('content', title);
-    } else {
-      const defaultTitle =
-        'Vistoria Veicular em Campinas | 5 Lojas Credenciadas DETRAN-SP | Auto Visão®';
-      document.title = defaultTitle;
-      if (ogTitle) ogTitle.setAttribute('content', defaultTitle);
+    const seo = seoForPath(window.location.pathname);
+    if (!seo) return;
+    document.title = seo.title;
+    const setContent = (selector: string, value: string) => {
+      const node = document.querySelector(selector);
+      if (node) node.setAttribute('content', value);
+    };
+    setContent('meta[name="description"]', seo.description);
+    setContent('meta[property="og:title"]', seo.title);
+    setContent('meta[property="og:description"]', seo.ogDescription);
+    setContent('meta[property="og:url"]', `https://campinas.autovisao.com${seo.path ? `/${seo.path}` : '/'}`);
+    setContent('meta[name="twitter:title"]', seo.title);
+    setContent('meta[name="twitter:description"]', seo.ogDescription);
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) {
+      canonical.setAttribute('href', `https://campinas.autovisao.com${seo.path ? `/${seo.path}` : '/'}`);
     }
   }, [activeLpService]);
 
@@ -1959,7 +1946,7 @@ export function App() {
           </div>
 
           <div className="ft-bottom">
-            <span>
+            <span suppressHydrationWarning>
               © {new Date().getFullYear()} Auto Visão Vistorias Automotivas — Unidades Campinas.
             </span>
             <span style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
