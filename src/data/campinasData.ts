@@ -457,6 +457,10 @@ export const VISTORIA_SERVICES: VistoriaService[] = [
         q: 'Quais marcas de carros elétricos e híbridos vocês atendem em Campinas?',
         a: 'Atendemos todas as marcas: BYD (Dolphin, Song Plus, Seal, Yuan), GWM (Haval H6, Ora 03), Volvo, Toyota (Corolla e RAV4 Hybrid), Caoa Chery, BMW, Audi, Porsche, Mini e Renault.',
       },
+      {
+        q: 'Onde é feito o laudo de bateria?',
+        a: 'O laudo de bateria é feito em qualquer uma das 5 lojas ou no seu endereço.',
+      },
     ],
     keywords: [
       'vistoria carros eletricos campinas',

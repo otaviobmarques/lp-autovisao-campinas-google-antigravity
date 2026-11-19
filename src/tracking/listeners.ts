@@ -32,6 +32,7 @@ const PAGE_SERVICE_LOCATIONS = new Set([
   'lp_outros',
   'lp_incluso',
   'lp_upsell',
+  'atendimento_movel',
 ]);
 
 const UNIT_HINTS: [string, string][] = [

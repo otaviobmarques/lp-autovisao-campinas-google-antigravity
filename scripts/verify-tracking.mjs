@@ -212,6 +212,46 @@ async function main() {
   await evalJson(`document.querySelector('.svc-hero .btn-wa').click()`);
   await sleep(200);
 
+  const openService = async (path) => {
+    await evalJson(`(() => {
+      const link = document.querySelector('a[href="${path}"]');
+      if (!link) throw new Error('sem link para ${path}');
+      link.click();
+      return true;
+    })()`);
+    await sleep(400);
+    const current = await evalJson('location.pathname');
+    assert(current === path, `navegação para ${path}, ficou em ${current}`);
+  };
+  const clickMobile = async (path) => {
+    const hit = await evalJson(`(() => {
+      const link = document.querySelector('#no-seu-endereco .btn-wa');
+      if (!link) return null;
+      const before = window.dataLayer.length;
+      link.click();
+      const added = window.dataLayer.slice(before);
+      const named = added.filter((item) => item && item.event === 'whatsapp_click');
+      const app = named.find((item) => item.av_source === 'app');
+      return {
+        path: location.pathname,
+        text: (link.textContent || '').replace(/\\s+/g, ' ').trim(),
+        count: named.length,
+        location: app && app.button_location,
+        service: app && app.service_name,
+      };
+    })()`);
+    console.log(
+      `${hit && hit.count === 1 && hit.location === 'atendimento_movel' ? 'PASS' : 'FAIL'} whatsapp x${hit ? hit.count : 0} [${hit && hit.location}] ${path} ${hit && hit.service} ${hit && hit.text}`
+    );
+    assert(hit && hit.path === path && hit.count === 1 && hit.location === 'atendimento_movel', `atendimento móvel em ${path}`);
+  };
+  await clickMobile('/vistoria-cautelar');
+  await openService('/vistoria-km-scanner');
+  await clickMobile('/vistoria-km-scanner');
+  await openService('/vistoria-bateria-eletricos');
+  await clickMobile('/vistoria-bateria-eletricos');
+  await openService('/vistoria-cautelar');
+
   await evalJson(`(() => {
     const setValue = (el, value) => {
       const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
@@ -261,6 +301,16 @@ async function main() {
     find('whatsapp_click', (item) => item.button_location === 'lp_hero' && item.service_name === 'Cautelar'),
     'whatsapp do hero do serviço'
   );
+  for (const [serviceName, location] of [
+    ['Cautelar', 'atendimento_movel'],
+    ['Scanner de KM', 'atendimento_movel'],
+    ['Certificado Bateria', 'atendimento_movel'],
+  ]) {
+    const hits = report.events.filter(
+      (item) => item.event === 'whatsapp_click' && item.button_location === location && item.service_name === serviceName
+    );
+    assert(hits.length === 1, `whatsapp_click ${serviceName} em ${location} veio ${hits.length} vez(es)`);
+  }
   assert(
     find('whatsapp_click', (item) => item.button_location === 'formulario' && item.service_name === 'Cautelar'),
     'whatsapp do formulário'
@@ -289,8 +339,8 @@ async function main() {
     'Meta ViewContent'
   );
   assert(
-    report.fbq.filter((call) => call[0] === 'track' && call[1] === 'PageView').length === 1,
-    'um PageView extra na troca de rota'
+    report.fbq.filter((call) => call[0] === 'track' && call[1] === 'PageView').length === 4,
+    'um PageView por troca de rota'
   );
   assert(report.fbq.some((call) => call[0] === 'track' && call[1] === 'Contact'), 'Meta Contact');
   assert(report.fbq.some((call) => call[0] === 'track' && call[1] === 'Lead'), 'Meta Lead');
