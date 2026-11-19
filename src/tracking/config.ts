@@ -9,7 +9,7 @@
  * Não usar GTM-5L9MXBST nem AW-17096558483 (contas de outra unidade).
  * A conta ativa do Google Ads é AW-18272410217 (Auto Visão 838-196-4384).
  * VITE_GADS_WHATSAPP_LABEL é o rótulo da conversão de WhatsApp para o GTM.
- * O site não dispara gtag('event', 'conversion'): a tag de conversão fica no GTM.
+ * O site não chama gtag('event', ...). O GTM lê o dataLayer e dispara Ads e GA4.
  */
 export const TRACKING_FALLBACKS = {
   VITE_GTM_ID: 'GTM-KSQPSJ6',
