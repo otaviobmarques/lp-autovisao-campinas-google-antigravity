@@ -11,12 +11,14 @@ export function renderTrackingSnippets(ids: TrackingIds): { head: string; bodySt
   const exposed = {
     ...(ids.gtmId ? { gtmId: ids.gtmId } : {}),
     ...(ids.gadsId ? { gadsId: ids.gadsId } : {}),
+    ...(ids.gadsWhatsappLabel ? { gadsWhatsappLabel: ids.gadsWhatsappLabel } : {}),
     ...(ids.metaPixelId ? { metaPixelId: ids.metaPixelId } : {}),
     ...(ids.ga4Id ? { ga4Id: ids.ga4Id } : {}),
   };
   const layer: Record<string, string> = {};
   if (ids.gtmId) layer.gtm_id = ids.gtmId;
   if (ids.gadsId) layer.gads_id = ids.gadsId;
+  if (ids.gadsWhatsappLabel) layer.gads_whatsapp_label = ids.gadsWhatsappLabel;
   if (ids.metaPixelId) layer.meta_pixel_id = ids.metaPixelId;
   if (ids.ga4Id) layer.ga4_measurement_id = ids.ga4Id;
 
@@ -56,6 +58,7 @@ src="https://www.facebook.com/tr?id=${ids.metaPixelId}&ev=PageView&noscript=1"/>
 
   if (ids.gadsId) {
     head.push(`<!-- Google Ads remarketing. page_view fica com o GA4 no GTM. -->
+<!-- Conversão de WhatsApp: só no GTM (acionador whatsapp_click). Aqui só o config. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=${ids.gadsId}" data-av-tracking="gads"></script>
 <script data-av-tracking="gads-config">
 window.dataLayer = window.dataLayer || [];

@@ -138,12 +138,15 @@ async function main() {
   const boot = await evalJson(`(() => ({
     tracking: window.AV_TRACKING,
     hasGa4Config: /gtag\\('config',\\s*"G-/.test(document.documentElement.outerHTML),
-    hasOldIds: /GTM-5L9MXBST|AW-17096558483/.test(document.documentElement.outerHTML),
+    hasOldIds: /GTM-5L9MXBST|AW-17096558483|AW-16735543241/.test(document.documentElement.outerHTML),
+    hasConversion: /gtag\\('event',\\s*'conversion'/.test(document.documentElement.outerHTML),
     sendPageViewFalse: document.documentElement.outerHTML.includes('send_page_view: false'),
     initialPageViews: (document.documentElement.outerHTML.match(/fbq\\('track', 'PageView'\\)/g) || []).length,
   }))()`);
   assert(boot.tracking.gtmId === 'GTM-KSQPSJ6', 'GTM na página');
-  assert(boot.tracking.gadsId === 'AW-16735543241', 'Google Ads na página');
+  assert(boot.tracking.gadsId === 'AW-18272410217', 'Google Ads na página');
+  assert(boot.tracking.gadsWhatsappLabel === 'zlu4CNuHttQcEOm0-4hE', 'label do WhatsApp exposto');
+  assert(boot.hasConversion === false, 'sem gtag conversion no HTML');
   assert(boot.tracking.metaPixelId === '885945550716019', 'Pixel na página');
   assert(boot.tracking.ga4Id === 'G-SK9H5S6H1K', 'GA4 exposto');
   assert(boot.sendPageViewFalse === true, 'Ads sem page_view automático');
@@ -246,9 +249,10 @@ async function main() {
   assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'FindLocation'), 'Meta FindLocation');
   assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'ScrollDepth'), 'Meta ScrollDepth');
   assert(
-    report.gtag.some((call) => call[0] === 'event' && call[1] === 'whatsapp_click' && call[2]?.send_to === 'AW-16735543241'),
+    report.gtag.some((call) => call[0] === 'event' && call[1] === 'whatsapp_click' && call[2]?.send_to === 'AW-18272410217'),
     'gtag do WhatsApp só para o AW'
   );
+  assert(!report.gtag.some((call) => call[1] === 'conversion'), 'código não dispara conversão');
   assert(!report.gtag.some((call) => call[1] === 'G-SK9H5S6H1K' || call[2]?.send_to === 'G-SK9H5S6H1K'), 'gtag não envia ao GA4');
   assert(exceptions.length === 0, `exceção na página: ${exceptions.join(' | ')}`);
 
