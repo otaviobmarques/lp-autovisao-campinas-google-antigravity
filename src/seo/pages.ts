@@ -21,26 +21,30 @@ const HOME_DESCRIPTION =
 const HOME_OG =
   'Vistoria do DETRAN, Cautelar, Vistoria 360º® (+180 itens), Pintura, Scanner de KM, Bateria Elétricos, Pesados, Seguradora e Premium. 5 unidades em Campinas e plantão aos sábados até 16h. Agende no WhatsApp (19) 99224-8383!';
 
-const SITELINK_COPY: Record<string, { title: string; description: string }> = {
+const SITELINK_COPY: Record<string, { title: string; description: string; h1: string }> = {
   'sobre-nos': {
     title: 'Sobre Nós | Auto Visão Campinas | Desde 2006',
     description:
       'A Auto Visão nasceu em Campinas em 2006. 5 lojas credenciadas pelo DETRAN-SP, certificação ISO 9001 e laudo na hora. WhatsApp (19) 99224-8383.',
+    h1: 'Auto Visão em Campinas desde 2006',
   },
   'nossos-servicos': {
     title: 'Serviços de Vistoria Veicular em Campinas | Auto Visão®',
     description:
       'Vistoria do DETRAN, Cautelar, 360º®, Pintura, Scanner de KM, Bateria EV, Pesados, Seguradora, Financeira e Premium. Escolha o laudo e agende nas 5 lojas de Campinas.',
+    h1: 'Serviços de vistoria em Campinas',
   },
   'nossas-lojas': {
     title: '5 Lojas da Auto Visão em Campinas | DETRAN-SP',
     description:
       'Taquaral, Centro, Ponte Preta/Abolição (plantão sábado até 16h), Campos Elíseos e Parque Industrial. Endereço, mapa e WhatsApp (19) 99224-8383.',
+    h1: '5 lojas da Auto Visão em Campinas',
   },
   'nosso-contato': {
     title: 'Contato e Agendamento | Auto Visão Campinas',
     description:
       'Agende sua vistoria em Campinas pelo WhatsApp (19) 99224-8383 ou pelo telefone (19) 3271-1700. Atendimento nas 5 lojas credenciadas pelo DETRAN-SP.',
+    h1: 'Fale com a Auto Visão Campinas',
   },
 };
 
@@ -74,7 +78,7 @@ export function listSeoPages(): SeoPage[] {
     title: copy.title,
     description: copy.description,
     ogDescription: copy.description,
-    h1: home.h1,
+    h1: copy.h1,
     faqs: FAQ_ITEMS,
   }));
 

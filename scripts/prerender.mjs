@@ -34,14 +34,27 @@ for (const page of pages) {
   }
   const row = inspect(html, page);
   if (!row.titleOk || !row.canonicalOk || !row.h1Ok || row.textChars < 2500) {
-    throw new Error(`Pré-render fraco em /${page.path || ''}: ${JSON.stringify(row)}`);
+    const { text, ...summary } = row;
+    throw new Error(`Pré-render fraco em /${page.path || ''}: ${JSON.stringify(summary)}`);
   }
+  if (row.h1Count !== 1) {
+    throw new Error(`A rota /${page.path || ''} tem ${row.h1Count} H1`);
+  }
+  assertPageCopy(page.path, html);
   if ((html.match(/fbq\('track', 'PageView'\)/g) || []).length !== 1) {
     throw new Error(`PageView duplicado em /${page.path || ''}`);
   }
   if (titles.has(page.title)) throw new Error(`Title repetido: ${page.title}`);
   titles.add(page.title);
   rows.push(row);
+}
+
+const homeText = rows.find((row) => row.path === '')?.text;
+for (const path of ['sobre-nos', 'nossos-servicos', 'nossas-lojas', 'nosso-contato']) {
+  const row = rows.find((item) => item.path === path);
+  if (!row || row.text === homeText) {
+    throw new Error(`O texto visível de /${path} continua igual ao da home`);
+  }
 }
 
 writeFileSync(join(dist, 'sitemap.xml'), sitemapXml(pages));
@@ -73,8 +86,45 @@ function inspect(html, page) {
     canonicalOk: canonical === canonicalUrl(page.path),
     h1,
     h1Ok: h1.includes(page.h1),
+    h1Count: (html.match(/<h1\b/g) || []).length,
+    text,
     textChars: text.length,
   };
+}
+
+function assertPageCopy(path, html) {
+  const mobile = {
+    'vistoria-cautelar': [
+      'id="no-seu-endereco"',
+      'Atendimento no seu endereço em Campinas',
+      'Não dá para levar o carro até a loja?',
+      'Agendar no meu endereço',
+      'Olá! Quero agendar a Vistoria Cautelar no meu endereço em Campinas.',
+    ],
+    'vistoria-km-scanner': [
+      'id="no-seu-endereco"',
+      'Scanner de KM no seu endereço',
+      'Vai olhar o carro na casa do vendedor?',
+      'Agendar no meu endereço',
+      'Olá! Quero agendar o Scanner de KM no meu endereço em Campinas.',
+    ],
+    'vistoria-bateria-eletricos': [
+      'id="no-seu-endereco"',
+      'Laudo de bateria no seu endereço',
+      'Para elétricos e híbridos plug-in compatíveis',
+      'Confirmar meu modelo',
+      'Olá! Quero o laudo de bateria no meu endereço. Meu carro é: ',
+      'O laudo de bateria é feito em qualquer uma das 5 lojas ou no seu endereço.',
+    ],
+  };
+  const note = 'Atendimento com agendamento. Confirme no WhatsApp a disponibilidade de horário e as condições do atendimento móvel.';
+  if (mobile[path]) {
+    for (const snippet of [...mobile[path], note]) {
+      if (!html.includes(snippet) && !html.includes(encodeURIComponent(snippet))) {
+        throw new Error(`Texto ausente em /${path}: ${snippet}`);
+      }
+    }
+  }
 }
 
 function applyHead(source, page) {

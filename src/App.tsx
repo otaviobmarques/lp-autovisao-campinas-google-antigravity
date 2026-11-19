@@ -22,6 +22,40 @@ const TOP_4_IDS = [
   'vistoria-bateria-eletricos',
 ];
 
+const INSTITUTIONAL_IDS = ['sobre-nos', 'nossos-servicos', 'nossas-lojas', 'nosso-contato'] as const;
+type InstitutionalId = (typeof INSTITUTIONAL_IDS)[number];
+
+const MOBILE_VISIT: Record<
+  string,
+  { title: string; text: string; button: string; message: string }
+> = {
+  'vistoria-cautelar': {
+    title: 'Atendimento no seu endereço em Campinas',
+    text: 'Não dá para levar o carro até a loja? Agende pelo WhatsApp e fazemos a Vistoria Cautelar no endereço que você indicar em Campinas: na sua casa, no trabalho ou no local do vendedor.',
+    button: 'Agendar no meu endereço',
+    message: 'Olá! Quero agendar a Vistoria Cautelar no meu endereço em Campinas.',
+  },
+  'vistoria-km-scanner': {
+    title: 'Scanner de KM no seu endereço',
+    text: 'Vai olhar o carro na casa do vendedor? Levamos o scanner até o endereço que você indicar em Campinas e você confere o KM real antes de fechar negócio.',
+    button: 'Agendar no meu endereço',
+    message: 'Olá! Quero agendar o Scanner de KM no meu endereço em Campinas.',
+  },
+  'vistoria-bateria-eletricos': {
+    title: 'Laudo de bateria no seu endereço',
+    text: 'Para elétricos e híbridos plug-in compatíveis, fazemos o laudo de bateria no endereço que você indicar em Campinas. Informe o modelo no WhatsApp para confirmarmos.',
+    button: 'Confirmar meu modelo',
+    message: 'Olá! Quero o laudo de bateria no meu endereço. Meu carro é: ',
+  },
+};
+
+const MOBILE_VISIT_NOTE =
+  'Atendimento com agendamento. Confirme no WhatsApp a disponibilidade de horário e as condições do atendimento móvel.';
+
+function isInstitutional(id: string | null | undefined): id is InstitutionalId {
+  return !!id && (INSTITUTIONAL_IDS as readonly string[]).includes(id);
+}
+
 function resolveInitialRoute(): { service: VistoriaService | null; sectionToScroll: string | null } {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -58,6 +92,10 @@ export function App() {
   const [activeLpService, setActiveLpService] = useState<VistoriaService | null>(
     () => resolveInitialRoute().service
   );
+  const [activeSection, setActiveSection] = useState<InstitutionalId | null>(() => {
+    const section = resolveInitialRoute().sectionToScroll;
+    return isInstitutional(section) ? section : null;
+  });
 
   // Hero Carousel State (3 crisp slides)
   const [heroSlide, setHeroSlide] = useState(0);
@@ -137,24 +175,17 @@ export function App() {
     return () => clearInterval(t);
   }, []);
 
-  // Scroll to Sitelink section if initial URL was /sobre-nos, /nossos-servicos, /nossas-lojas or /nosso-contato
-  useEffect(() => {
-    const init = resolveInitialRoute();
-    if (init.sectionToScroll) {
-      setTimeout(() => {
-        document.getElementById(init.sectionToScroll!)?.scrollIntoView({ behavior: 'smooth' });
-      }, 150);
-    }
-  }, []);
+  // Nas páginas institucionais o bloco próprio já abre a página. Nas outras rotas, a âncora ainda rola.
 
   // Listen to browser navigation (popstate / hashchange)
   useEffect(() => {
     const onRouteChange = () => {
       const { service, sectionToScroll } = resolveInitialRoute();
       setActiveLpService(service);
+      setActiveSection(service || !isInstitutional(sectionToScroll) ? null : sectionToScroll);
       if (service) {
         setFormService(service.title);
-      } else if (sectionToScroll) {
+      } else if (sectionToScroll && !isInstitutional(sectionToScroll)) {
         setTimeout(() => {
           document.getElementById(sectionToScroll)?.scrollIntoView({ behavior: 'smooth' });
         }, 80);
@@ -195,8 +226,13 @@ export function App() {
     setMobileSheet(null);
     setActiveLpService(svc);
     if (svc) {
+      setActiveSection(null);
       setFormService(svc.title);
       window.history.pushState({}, '', `/${svc.slug}${window.location.search}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (isInstitutional(targetSectionId)) {
+      setActiveSection(targetSectionId);
+      window.history.pushState({}, '', `/${targetSectionId}${window.location.search}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (targetSectionId) {
       window.history.pushState({}, '', `/${targetSectionId}${window.location.search}`);
@@ -204,6 +240,7 @@ export function App() {
         document.getElementById(targetSectionId)?.scrollIntoView({ behavior: 'smooth' });
       }, 60);
     } else {
+      setActiveSection(null);
       window.history.pushState({}, '', `/${window.location.search}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -361,168 +398,9 @@ export function App() {
     setTimeout(() => setCopiedSlug(null), 2200);
   };
 
-  return (
-    <>
-      <SvgSprites />
-      <a className="skip" href="#main">
-        Pular para o conteúdo principal
-      </a>
-
-      {/* TOPBAR OFICIAL ESCURA #151415 */}
-      <div className="topbar">
-        <div className="wrap">
-          <ul>
-            <li>
-              <Icon name="store" />5 lojas em Campinas/SP
-            </li>
-            <li>
-              <Icon name="shield" />
-              Credenciadas pelo DETRAN-SP
-            </li>
-            <li>
-              <Icon name="clock" />
-              Plantão Sábado até 16h (Abolição)
-            </li>
-          </ul>
-          <span className="tb-r">
-            <a href={`tel:${CENTRAL_TEL}`} className="tb-area">
-              <Icon name="phone" />
-              Fixo {CENTRAL_DISPLAY}
-            </a>
-            <a
-              href={buildWhatsAppUrl(
-                activeLpService
-                  ? activeLpService.whatsappMsg
-                  : 'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
-              )}
-              target="_blank"
-              rel="noopener"
-            >
-              <Icon name="wa" />
-              WhatsApp {WA_DISPLAY}
-            </a>
-          </span>
-        </div>
-      </div>
-
-      {/* HEADER LIMPO E OBJETIVO (5 ITENS ESSENCIAIS + CTA) */}
-      <header className={`hdr ${scrolled ? 'sc' : ''}`}>
-        <div className="wrap">
-          <a
-            className="logo"
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateToLp(null);
-            }}
-            aria-label="Auto Visão Vistorias Automotivas Campinas – Início"
-          >
-            <img
-              src="/assets/img/logo-autovisao.svg"
-              alt="Auto Visão Vistorias Automotivas Campinas"
-              width="176"
-              height="42"
-            />
-          </a>
-
-          <button
-            className="menu-btn"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="nav"
-            aria-label="Abrir menu de navegação"
-            onClick={() => setMobileMenuOpen((o) => !o)}
-          >
-            <Icon name={mobileMenuOpen ? 'x' : 'menu'} />
-          </button>
-
-          <nav className={`nav ${mobileMenuOpen ? 'open' : ''}`} id="nav" aria-label="Principal">
-            {/* Dropdown Nossos Serviços */}
-            <div className={`dd ${openDropdown === 'servicos' ? 'open' : ''}`} data-dd>
-              <button
-                className="dd-btn"
-                type="button"
-                aria-expanded={openDropdown === 'servicos'}
-                onClick={() => setOpenDropdown((d) => (d === 'servicos' ? null : 'servicos'))}
-              >
-                Nossos Serviços
-                <Icon name="chev" className="i dd-chev" />
-              </button>
-              <div className="dd-menu">
-                {PUBLIC_MAIN_SERVICES.map((svc) => (
-                  <a
-                    key={svc.id}
-                    href={`/${svc.slug}`}
-                    aria-current={activeLpService?.id === svc.id ? 'page' : undefined}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigateToLp(svc);
-                    }}
-                  >
-                    <Icon name={svc.icon} />
-                    <span>{svc.shortTitle}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <a
-              href="/nossas-lojas"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollToSection('nossas-lojas');
-              }}
-            >
-              Nossas Lojas (5)
-            </a>
-
-            <a
-              href="/sobre-nos"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollToSection('sobre-nos');
-              }}
-            >
-              Sobre Nós
-            </a>
-
-            <a
-              href="/nosso-contato"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollToSection('nosso-contato');
-              }}
-            >
-              Contato
-            </a>
-
-            <a
-              className="btn btn-sm btn-wa"
-              href={buildWhatsAppUrl(
-                activeLpService
-                  ? activeLpService.whatsappMsg
-                  : 'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
-              )}
-              target="_blank"
-              rel="noopener"
-            >
-              <Icon name="wa" />
-              <span>Agendar no WhatsApp</span>
-            </a>
-          </nav>
-
-          <span
-            className="progress"
-            style={{ transform: `scaleX(${scrollProgress})` }}
-            aria-hidden="true"
-          />
-        </div>
-      </header>
-
-      <main id="main">
-        {/* =====================================================================
-            MODO LANDING PAGE DEDICADA POR SERVIÇO (COM BANNER VISUAL DS!)
-           ===================================================================== */}
-        {activeLpService ? (
+  const blockServiceLp = () => {
+    if (!activeLpService) return null;
+    return (
           <>
             <div className="lp-banner-top">
               <div className="wrap">
@@ -554,6 +432,11 @@ export function App() {
                         {activeLpService.headlineBold}
                       </h1>
                       <p className="lead">{activeLpService.salesCopy}</p>
+                      {activeLpService.id === 'vistoria-bateria-eletricos' && (
+                        <p className="lead">
+                          O laudo de bateria é feito em qualquer uma das 5 lojas ou no seu endereço.
+                        </p>
+                      )}
                       <div className="chips">
                         <span className="chip">
                           <Icon name="clock" /> Média de {activeLpService.timeEstimate}
@@ -653,6 +536,33 @@ export function App() {
                   </div>
                 </div>
 
+                {MOBILE_VISIT[activeLpService.id] && (
+                  <section
+                    id="no-seu-endereco"
+                    className="box mobile-visit"
+                    data-track-location="atendimento_movel"
+                    data-service-id={activeLpService.id}
+                  >
+                    <span className="ico" aria-hidden="true">
+                      <Icon name="pin" />
+                    </span>
+                    <div>
+                      <h2>{MOBILE_VISIT[activeLpService.id].title}</h2>
+                      <p>{MOBILE_VISIT[activeLpService.id].text}</p>
+                      <p className="note">{MOBILE_VISIT_NOTE}</p>
+                      <a
+                        className="btn btn-wa"
+                        href={buildWhatsAppUrl(MOBILE_VISIT[activeLpService.id].message)}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        <Icon name="wa" />
+                        <span>{MOBILE_VISIT[activeLpService.id].button}</span>
+                      </a>
+                    </div>
+                  </section>
+                )}
+
                 {/* UPSELL ENXUTO PARA SCANNER DE MÓDULO & BATERIA EV */}
                 {activeLpService.id !== 'vistoria-km-scanner' &&
                   activeLpService.id !== 'vistoria-bateria-eletricos' && (
@@ -742,10 +652,10 @@ export function App() {
               </div>
             </section>
           </>
-        ) : (
-          /* =====================================================================
-              HOME SIMPLES, LEVE E FÁCIL DE DECIDIR (UX EXPERIENCE)
-             ===================================================================== */
+    );
+  };
+
+  const blockHomeHero = () => (
           <>
             {/* 1. HERO ENXUTO (3 BANNERS CLAROS) */}
             <section
@@ -947,7 +857,11 @@ export function App() {
 
               <div className="strip" style={{ ['--h' as any]: '36px' }} aria-hidden="true" />
             </section>
+          </>
+  );
 
+  const blockTrust = () => (
+          <>
             {/* 2. FAIXA RÁPIDA DE CONFIANÇA */}
             <section className="trust" aria-label="Diferenciais em Campinas">
               <div className="wrap">
@@ -991,15 +905,23 @@ export function App() {
                 </ul>
               </div>
             </section>
+          </>
+  );
 
+  const blockServices = () => (
+          <>
             {/* 3. NOSSOS SERVIÇOS — TUDO EM UM SÓ LUGAR, FÁCIL E SEM REPETIÇÃO */}
             <section className="sec" id="nossos-servicos">
               <div className="wrap">
                 <div className="sec-head center">
                   <span className="kicker">Nossos Serviços em Campinas</span>
-                  <h2 className="h2">
-                    <span className="lt">Qual vistoria você</span> precisa fazer hoje?
-                  </h2>
+                  {activeSection === 'nossos-servicos' ? (
+                    <h1 className="h-display">Serviços de vistoria em Campinas</h1>
+                  ) : (
+                    <h2 className="h2">
+                      <span className="lt">Qual vistoria você</span> precisa fazer hoje?
+                    </h2>
+                  )}
                   <p className="lead">
                     Escolha abaixo para agendar direto no WhatsApp ou abrir a página com todos os
                     detalhes.
@@ -1227,7 +1149,11 @@ export function App() {
                 </div>
               </div>
             </section>
+          </>
+  );
 
+  const blockWizard = () => (
+          <>
             {/* 4. RECOMENDADOR EM 2 CLIQUES (EXCLUSIVO PESSOA FÍSICA) */}
             <section className="sec alt" id="qual-vistoria">
               <div className="wrap">
@@ -1332,8 +1258,10 @@ export function App() {
               </div>
             </section>
           </>
-        )}
+  );
 
+  const blockStores = () => (
+        <>
         {/* =====================================================================
             5. NOSSAS 5 LOJAS EM CAMPINAS (#nossas-lojas) — LIMPO E DIRETO
            ===================================================================== */}
@@ -1341,9 +1269,13 @@ export function App() {
           <div className="wrap" id="unidades">
             <div className="sec-head">
               <span className="kicker">Nossas Lojas · 5 Unidades em Campinas</span>
-              <h2 className="h2">
-                <span className="lt">Escolha a loja</span> mais perto de você
-              </h2>
+              {activeSection === 'nossas-lojas' ? (
+                <h1 className="h-display">5 lojas da Auto Visão em Campinas</h1>
+              ) : (
+                <h2 className="h2">
+                  <span className="lt">Escolha a loja</span> mais perto de você
+                </h2>
+              )}
             </div>
 
             {/* BARRA ENXUTA DE PLANTÃO SÁBADO ATÉ 16H */}
@@ -1515,17 +1447,20 @@ export function App() {
             </p>
           </div>
         </section>
+        </>
+  );
 
-        {/* =====================================================================
-            6. SOBRE NÓS (#sobre-nos) + NOSSO CONTATO (#nosso-contato)
-           ===================================================================== */}
-        <section className="sec alt" id="sobre-nos">
-          <div className="wrap schedule-grid">
+  const blockAbout = () => {
+    const story = (
             <div className="net-copy">
               <span className="kicker">Sobre Nós · Desde 2006 em Campinas</span>
-              <h2 className="h2">
-                <span className="lt">Quase 20 anos de</span> credibilidade e laudos precisos.
-              </h2>
+              {activeSection === 'sobre-nos' ? (
+                <h1 className="h-display">Auto Visão em Campinas desde 2006</h1>
+              ) : (
+                <h2 className="h2">
+                  <span className="lt">Quase 20 anos de</span> credibilidade e laudos precisos.
+                </h2>
+              )}
               <p className="lead">
                 Fundada em Campinas em 2006, a <strong>Auto Visão®</strong> soma mais de 240 lojas no
                 Brasil e certificação <strong>DETRAN-SP</strong> e <strong>ISO 9001</strong>.
@@ -1545,16 +1480,31 @@ export function App() {
                 </figcaption>
               </figure>
             </div>
-
+    );
+    const contact = (
             <div className="schedule-card" id="nosso-contato">
               <span className="kicker">Agendamento Rápido</span>
-              <h3 className="h2" style={{ marginTop: 8, marginBottom: 6 }}>
-                <span className="lt">Agende pelo</span> WhatsApp {WA_DISPLAY}
-              </h3>
-              <p style={{ color: 'var(--muted)', marginBottom: 18, fontSize: 15 }}>
-                Preencha em 10 segundos ou ligue no fixo{' '}
+              {activeSection === 'nosso-contato' ? (
+                <h1 className="h-display" style={{ marginTop: 8, marginBottom: 6 }}>
+                  Fale com a Auto Visão Campinas
+                </h1>
+              ) : (
+                <h3 className="h2" style={{ marginTop: 8, marginBottom: 6 }}>
+                  <span className="lt">Agende pelo</span> WhatsApp {WA_DISPLAY}
+                </h3>
+              )}
+              <p style={{ color: 'var(--muted)', marginBottom: 12, fontSize: 15 }}>
+                WhatsApp{' '}
+                <a href={buildWhatsAppUrl('Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.')} target="_blank" rel="noopener" style={{ fontWeight: 700 }}>
+                  {WA_DISPLAY}
+                </a>
+                , telefone fixo{' '}
                 <a href={`tel:${CENTRAL_TEL}`} style={{ fontWeight: 700 }}>
                   {CENTRAL_DISPLAY}
+                </a>{' '}
+                e e-mail{' '}
+                <a href="mailto:contato@autovisao.com" style={{ fontWeight: 700 }}>
+                  contato@autovisao.com
                 </a>
                 .
               </p>
@@ -1648,9 +1598,28 @@ export function App() {
                 </div>
               </form>
             </div>
-          </div>
-        </section>
+    );
+    return (
+      <section className="sec alt" id="sobre-nos">
+        <div className="wrap schedule-grid">
+          {activeSection === 'nosso-contato' ? (
+            <>
+              {contact}
+              {story}
+            </>
+          ) : (
+            <>
+              {story}
+              {contact}
+            </>
+          )}
+        </div>
+      </section>
+    );
+  };
 
+  const blockFaq = () => (
+        <>
         {/* =====================================================================
             7. DÚVIDAS RÁPIDAS (TOP 5 PERGUNTAS)
            ===================================================================== */}
@@ -1694,7 +1663,11 @@ export function App() {
             </div>
           </div>
         </section>
+        </>
+  );
 
+  const blockFinal = () => (
+        <>
         {/* =====================================================================
             8. CTA FINAL
            ===================================================================== */}
@@ -1732,6 +1705,226 @@ export function App() {
             </div>
           </div>
         </section>
+        </>
+  );
+
+  return (
+    <>
+      <SvgSprites />
+      <a className="skip" href="#main">
+        Pular para o conteúdo principal
+      </a>
+
+      {/* TOPBAR OFICIAL ESCURA #151415 */}
+      <div className="topbar">
+        <div className="wrap">
+          <ul>
+            <li>
+              <Icon name="store" />5 lojas em Campinas/SP
+            </li>
+            <li>
+              <Icon name="shield" />
+              Credenciadas pelo DETRAN-SP
+            </li>
+            <li>
+              <Icon name="clock" />
+              Plantão Sábado até 16h (Abolição)
+            </li>
+          </ul>
+          <span className="tb-r">
+            <a href={`tel:${CENTRAL_TEL}`} className="tb-area">
+              <Icon name="phone" />
+              Fixo {CENTRAL_DISPLAY}
+            </a>
+            <a
+              href={buildWhatsAppUrl(
+                activeLpService
+                  ? activeLpService.whatsappMsg
+                  : 'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
+              )}
+              target="_blank"
+              rel="noopener"
+            >
+              <Icon name="wa" />
+              WhatsApp {WA_DISPLAY}
+            </a>
+          </span>
+        </div>
+      </div>
+
+      {/* HEADER LIMPO E OBJETIVO (5 ITENS ESSENCIAIS + CTA) */}
+      <header className={`hdr ${scrolled ? 'sc' : ''}`}>
+        <div className="wrap">
+          <a
+            className="logo"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              navigateToLp(null);
+            }}
+            aria-label="Auto Visão Vistorias Automotivas Campinas – Início"
+          >
+            <img
+              src="/assets/img/logo-autovisao.svg"
+              alt="Auto Visão Vistorias Automotivas Campinas"
+              width="176"
+              height="42"
+            />
+          </a>
+
+          <button
+            className="menu-btn"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="nav"
+            aria-label="Abrir menu de navegação"
+            onClick={() => setMobileMenuOpen((o) => !o)}
+          >
+            <Icon name={mobileMenuOpen ? 'x' : 'menu'} />
+          </button>
+
+          <nav className={`nav ${mobileMenuOpen ? 'open' : ''}`} id="nav" aria-label="Principal">
+            {/* Dropdown Nossos Serviços */}
+            <div className={`dd ${openDropdown === 'servicos' ? 'open' : ''}`} data-dd>
+              <button
+                className="dd-btn"
+                type="button"
+                aria-expanded={openDropdown === 'servicos'}
+                onClick={() => setOpenDropdown((d) => (d === 'servicos' ? null : 'servicos'))}
+              >
+                Nossos Serviços
+                <Icon name="chev" className="i dd-chev" />
+              </button>
+              <div className="dd-menu">
+                {PUBLIC_MAIN_SERVICES.map((svc) => (
+                  <a
+                    key={svc.id}
+                    href={`/${svc.slug}`}
+                    aria-current={activeLpService?.id === svc.id ? 'page' : undefined}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateToLp(svc);
+                    }}
+                  >
+                    <Icon name={svc.icon} />
+                    <span>{svc.shortTitle}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <a
+              href="/nossas-lojas"
+              aria-current={activeSection === 'nossas-lojas' ? 'page' : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToLp(null, 'nossas-lojas');
+              }}
+            >
+              Nossas Lojas (5)
+            </a>
+
+            <a
+              href="/sobre-nos"
+              aria-current={activeSection === 'sobre-nos' ? 'page' : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToLp(null, 'sobre-nos');
+              }}
+            >
+              Sobre Nós
+            </a>
+
+            <a
+              href="/nosso-contato"
+              aria-current={activeSection === 'nosso-contato' ? 'page' : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToLp(null, 'nosso-contato');
+              }}
+            >
+              Contato
+            </a>
+
+            <a
+              className="btn btn-sm btn-wa"
+              href={buildWhatsAppUrl(
+                activeLpService
+                  ? activeLpService.whatsappMsg
+                  : 'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
+              )}
+              target="_blank"
+              rel="noopener"
+            >
+              <Icon name="wa" />
+              <span>Agendar no WhatsApp</span>
+            </a>
+          </nav>
+
+          <span
+            className="progress"
+            style={{ transform: `scaleX(${scrollProgress})` }}
+            aria-hidden="true"
+          />
+        </div>
+      </header>
+
+      <main id="main">
+        {activeLpService ? (
+          <>
+            {blockServiceLp()}
+            {blockStores()}
+            {blockAbout()}
+            {blockFaq()}
+            {blockFinal()}
+          </>
+        ) : activeSection === 'nossas-lojas' ? (
+          <>
+            {blockStores()}
+            {blockTrust()}
+            {blockServices()}
+            {blockWizard()}
+            {blockAbout()}
+            {blockFaq()}
+            {blockFinal()}
+          </>
+        ) : activeSection === 'nossos-servicos' ? (
+          <>
+            {blockServices()}
+            {blockWizard()}
+            {blockStores()}
+            {blockTrust()}
+            {blockAbout()}
+            {blockFaq()}
+            {blockFinal()}
+          </>
+        ) : activeSection === 'sobre-nos' ? (
+          <>
+            {blockAbout()}
+            {blockStores()}
+            {blockServices()}
+            {blockFaq()}
+            {blockFinal()}
+          </>
+        ) : activeSection === 'nosso-contato' ? (
+          <>
+            {blockAbout()}
+            {blockServices()}
+            {blockStores()}
+            {blockFaq()}
+            {blockFinal()}
+          </>
+        ) : (
+          <>
+            {blockHomeHero()}
+            {blockTrust()}
+            {blockServices()}
+            {blockWizard()}
+            {blockStores()}
+            {blockAbout()}
+            {blockFaq()}
+            {blockFinal()}
+          </>
+        )}
       </main>
 
       {/* =====================================================================
@@ -1828,7 +2021,7 @@ export function App() {
                     href="/sobre-nos"
                     onClick={(e) => {
                       e.preventDefault();
-                      scrollToSection('sobre-nos');
+                      navigateToLp(null, 'sobre-nos');
                     }}
                   >
                     Sobre Nós
@@ -1836,10 +2029,32 @@ export function App() {
                 </li>
                 <li>
                   <a
+                    href="/nossos-servicos"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateToLp(null, 'nossos-servicos');
+                    }}
+                  >
+                    Nossos Serviços
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/nossas-lojas"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateToLp(null, 'nossas-lojas');
+                    }}
+                  >
+                    Nossas Lojas
+                  </a>
+                </li>
+                <li>
+                  <a
                     href="/nosso-contato"
                     onClick={(e) => {
                       e.preventDefault();
-                      scrollToSection('nosso-contato');
+                      navigateToLp(null, 'nosso-contato');
                     }}
                   >
                     Nosso Contato
