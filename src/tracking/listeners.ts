@@ -92,18 +92,22 @@ function onClick(event: Event) {
     if (!(el instanceof HTMLAnchorElement || el instanceof HTMLButtonElement)) return;
     if (isWhatsapp(el)) {
       trackWhatsapp(el);
+      deferSameTabNavigation(event, el);
       return;
     }
     if (isPhone(el)) {
       trackPhone(el);
+      deferSameTabNavigation(event, el);
       return;
     }
     if (isAddress(el)) {
       trackLocation(el, EVENTS.address, 'endereco');
+      deferSameTabNavigation(event, el);
       return;
     }
     if (isMap(el)) {
       trackLocation(el, EVENTS.map, mapProvider(el));
+      deferSameTabNavigation(event, el);
       return;
     }
     const service = serviceFromAnchor(el);
@@ -412,8 +416,10 @@ function serviceForClick(el: Element): ServiceRef | null {
   const fromId = serviceRefFromId(id);
   if (fromId) return fromId;
   if (named) return { id: '', name: named };
-  const location = buttonLocation(el);
-  if (PAGE_SERVICE_LOCATIONS.has(location)) return serviceFromPath(location.pathname);
+  // `place` não pode se chamar `location`: isso sombreia window.location e
+  // `location.pathname` vira undefined, o push do evento estoura e some.
+  const place = buttonLocation(el);
+  if (PAGE_SERVICE_LOCATIONS.has(place)) return serviceFromPath(window.location.pathname);
   return null;
 }
 
@@ -422,6 +428,18 @@ function serviceFromAnchor(el: Element): ServiceRef | null {
   const raw = el.getAttribute('href') || '';
   if (!raw.startsWith('/') || raw.startsWith('//')) return null;
   return serviceFromPath(new URL(raw, location.origin).pathname);
+}
+
+/** Links externos na mesma aba esperam o dataLayer antes de navegar. Os de WhatsApp abrem em outra aba. */
+function deferSameTabNavigation(event: Event, el: Element) {
+  if (!(el instanceof HTMLAnchorElement) || el.target === '_blank') return;
+  if (event.defaultPrevented || ('button' in event && event.button !== 0)) return;
+  const raw = el.getAttribute('href') || '';
+  if (!raw || raw.startsWith('#') || raw.startsWith('/') || raw.startsWith('javascript:')) return;
+  event.preventDefault();
+  window.setTimeout(() => {
+    window.location.assign(el.href);
+  }, 300);
 }
 
 function isWhatsapp(el: Element): boolean {

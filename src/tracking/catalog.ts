@@ -35,7 +35,8 @@ export function serviceRefFromId(id: string | null | undefined): ServiceRef | nu
   return { id, name };
 }
 
-export function serviceFromPath(pathname: string): ServiceRef | null {
+export function serviceFromPath(pathname: string | null | undefined): ServiceRef | null {
+  if (!pathname) return null;
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length !== 1) return null;
   const svc = findServiceBySlug(parts[0]);
