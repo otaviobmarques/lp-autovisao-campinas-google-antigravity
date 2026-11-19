@@ -1,7 +1,6 @@
 import { attributionParams, type Attribution } from './attribution';
 import { EVENTS, safeEventName } from './events';
 import { interestFields } from './interest';
-import { trackingIds } from './runtimeIds';
 import { sanitizeParams } from './sanitize';
 
 export type MetaCall = {
@@ -23,8 +22,6 @@ export function emit(
   deps: {
     dataLayer?: unknown[];
     fbq?: (...args: unknown[]) => void;
-    gtag?: (...args: unknown[]) => void;
-    gadsId?: string;
     attribution?: Attribution;
     interest?: string[];
   } = {}
@@ -68,17 +65,9 @@ export function emit(
     // pixel indisponível
   }
 
-  try {
-    const gadsId = deps.gadsId ?? trackingIds.gadsId;
-    const gtag = deps.gtag ?? window.gtag;
-    if (gadsId && typeof gtag === 'function') {
-      // Evento de remarketing para a conta AW. A conversão (send_to com label)
-      // fica no GTM, no acionador whatsapp_click, para não contar duas vezes.
-      gtag('event', name, { send_to: gadsId, ...safe });
-    }
-  } catch {
-    // gtag indisponível
-  }
+  // Sem gtag('event', ...): o gtag também faz dataLayer.push(arguments) e o GTM
+  // lê isso como um segundo evento com o mesmo nome. Ads e GA4 saem só pelas tags do GTM.
+  // O config AW com send_page_view:false continua no HTML, para o linker/gclid.
 
   return payload;
 }

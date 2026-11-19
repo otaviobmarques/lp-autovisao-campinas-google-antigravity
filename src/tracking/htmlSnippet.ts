@@ -58,7 +58,7 @@ src="https://www.facebook.com/tr?id=${ids.metaPixelId}&ev=PageView&noscript=1"/>
 
   if (ids.gadsId) {
     head.push(`<!-- Google Ads remarketing. page_view fica com o GA4 no GTM. -->
-<!-- Conversão de WhatsApp: só no GTM (acionador whatsapp_click). Aqui só o config. -->
+<!-- Só o config (linker/gclid). Eventos não saem por gtag('event'): o GTM leria o push duas vezes. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=${ids.gadsId}" data-av-tracking="gads"></script>
 <script data-av-tracking="gads-config">
 window.dataLayer = window.dataLayer || [];

@@ -157,27 +157,32 @@ async function main() {
   assert(boot.initialPageViews === 1, 'PageView inicial único no HTML');
 
   const whatsappLinks = await evalJson(`(() => {
+    const eventName = (item) => {
+      if (!item || typeof item !== 'object') return '';
+      if (typeof item.event === 'string') return item.event;
+      if (item[0] === 'event' && typeof item[1] === 'string') return item[1];
+      return '';
+    };
     const links = [...document.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"], a[href*="whatsapp.com"]')];
     return links.map((link, index) => {
       const before = window.dataLayer.length;
-      const gtagBefore = window.__gtagCalls.length;
       link.click();
-      const added = window.dataLayer.slice(before).filter((item) => item && Object.prototype.toString.call(item) === '[object Object]');
-      const hit = added.find((item) => item.event === 'whatsapp_click' && item.av_source === 'app');
-      const conversion = added.some((item) => item.event === 'conversion')
-        || window.__gtagCalls.slice(gtagBefore).some((call) => call[1] === 'conversion');
+      const added = window.dataLayer.slice(before);
+      const named = added.map(eventName).filter((name) => name === 'whatsapp_click');
+      const hit = added.find((item) => item && item.event === 'whatsapp_click' && item.av_source === 'app');
       return {
         index,
         text: (link.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 70),
         location: hit && hit.button_location,
         service: hit && hit.service_name,
-        ok: Boolean(hit) && !conversion,
+        count: named.length,
+        ok: named.length === 1 && Boolean(hit),
       };
     });
   })()`);
   const failedLinks = whatsappLinks.filter((item) => !item.ok);
   for (const item of whatsappLinks) {
-    console.log(`${item.ok ? 'PASS' : 'FAIL'} whatsapp [${item.location || '-'}] ${item.text}`);
+    console.log(`${item.ok ? 'PASS' : 'FAIL'} whatsapp x${item.count} [${item.location || '-'}] ${item.text}`);
   }
   assert(whatsappLinks.length > 0, 'nenhum link de WhatsApp na página');
   assert(failedLinks.length === 0, `whatsapp_click faltou em ${failedLinks.length} link(s)`);
@@ -185,7 +190,23 @@ async function main() {
   await evalJson(`document.querySelector('[data-service-view="vistoria-premium"]').scrollIntoView({ block: 'center' })`);
   await sleep(400);
 
-  await evalJson(`document.querySelector('#vistoria-cautelar a[href="/vistoria-cautelar"]').click()`);
+  const serviceClick = await evalJson(`(() => {
+    const eventName = (item) => {
+      if (!item || typeof item !== 'object') return '';
+      if (typeof item.event === 'string') return item.event;
+      if (item[0] === 'event' && typeof item[1] === 'string') return item[1];
+      return '';
+    };
+    const link = document.querySelector('#vistoria-cautelar a[href="/vistoria-cautelar"]');
+    const before = window.dataLayer.length;
+    link.click();
+    const added = window.dataLayer.slice(before);
+    const named = added.map(eventName).filter((name) => name === 'service_click');
+    const hit = added.find((item) => item && item.event === 'service_click' && item.av_source === 'app');
+    return { count: named.length, location: hit && hit.button_location, ok: named.length === 1 && Boolean(hit) };
+  })()`);
+  console.log(`${serviceClick.ok ? 'PASS' : 'FAIL'} service_click x${serviceClick.count} [${serviceClick.location || '-'}] Vistoria Cautelar`);
+  assert(serviceClick.ok, 'service_click deve aparecer exatamente uma vez');
   await sleep(500);
 
   await evalJson(`document.querySelector('.svc-hero .btn-wa').click()`);
@@ -277,10 +298,9 @@ async function main() {
   assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'FindLocation'), 'Meta FindLocation');
   assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'ScrollDepth'), 'Meta ScrollDepth');
   assert(
-    report.gtag.some((call) => call[0] === 'event' && call[1] === 'whatsapp_click' && call[2]?.send_to === 'AW-18272410217'),
-    'gtag do WhatsApp só para o AW'
+    !report.gtag.some((call) => call[0] === 'event' && ['whatsapp_click', 'service_click', 'service_view', 'phone_click', 'map_click', 'address_click', 'scroll_depth', 'time_on_page', 'spa_navigation'].includes(call[1])),
+    'código não repete o evento no gtag'
   );
-  assert(!report.gtag.some((call) => call[1] === 'conversion'), 'código não dispara conversão');
   assert(!report.gtag.some((call) => call[1] === 'G-SK9H5S6H1K' || call[2]?.send_to === 'G-SK9H5S6H1K'), 'gtag não envia ao GA4');
   assert(exceptions.length === 0, `exceção na página: ${exceptions.join(' | ')}`);
 
