@@ -138,7 +138,9 @@ async function main() {
   const boot = await evalJson(`(() => ({
     tracking: window.AV_TRACKING,
     hasGa4Config: /gtag\\('config',\\s*"G-/.test(document.documentElement.outerHTML),
-    hasOldIds: /GTM-5L9MXBST|AW-17096558483|AW-16735543241/.test(document.documentElement.outerHTML),
+    hasOldIds: /GTM-5L9MXBST|AW-17096558483|AW-16735543241/.test(
+      [...document.querySelectorAll('[data-av-tracking]')].map((node) => node.outerHTML).join('\\n')
+    ),
     hasConversion: /gtag\\('event',\\s*'conversion'/.test(document.documentElement.outerHTML),
     sendPageViewFalse: document.documentElement.outerHTML.includes('send_page_view: false'),
     initialPageViews: (document.documentElement.outerHTML.match(/fbq\\('track', 'PageView'\\)/g) || []).length,
@@ -153,6 +155,32 @@ async function main() {
   assert(boot.hasGa4Config === false, 'sem gtag de GA4');
   assert(boot.hasOldIds === false, 'sem IDs de outra unidade');
   assert(boot.initialPageViews === 1, 'PageView inicial único no HTML');
+
+  const whatsappLinks = await evalJson(`(() => {
+    const links = [...document.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"], a[href*="whatsapp.com"]')];
+    return links.map((link, index) => {
+      const before = window.dataLayer.length;
+      const gtagBefore = window.__gtagCalls.length;
+      link.click();
+      const added = window.dataLayer.slice(before).filter((item) => item && Object.prototype.toString.call(item) === '[object Object]');
+      const hit = added.find((item) => item.event === 'whatsapp_click' && item.av_source === 'app');
+      const conversion = added.some((item) => item.event === 'conversion')
+        || window.__gtagCalls.slice(gtagBefore).some((call) => call[1] === 'conversion');
+      return {
+        index,
+        text: (link.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 70),
+        location: hit && hit.button_location,
+        service: hit && hit.service_name,
+        ok: Boolean(hit) && !conversion,
+      };
+    });
+  })()`);
+  const failedLinks = whatsappLinks.filter((item) => !item.ok);
+  for (const item of whatsappLinks) {
+    console.log(`${item.ok ? 'PASS' : 'FAIL'} whatsapp [${item.location || '-'}] ${item.text}`);
+  }
+  assert(whatsappLinks.length > 0, 'nenhum link de WhatsApp na página');
+  assert(failedLinks.length === 0, `whatsapp_click faltou em ${failedLinks.length} link(s)`);
 
   await evalJson(`document.querySelector('[data-service-view="vistoria-premium"]').scrollIntoView({ block: 'center' })`);
   await sleep(400);
