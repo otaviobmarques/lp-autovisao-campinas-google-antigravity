@@ -72,6 +72,8 @@ export function emit(
     const gadsId = deps.gadsId ?? trackingIds.gadsId;
     const gtag = deps.gtag ?? window.gtag;
     if (gadsId && typeof gtag === 'function') {
+      // Evento de remarketing para a conta AW. A conversão (send_to com label)
+      // fica no GTM, no acionador whatsapp_click, para não contar duas vezes.
       gtag('event', name, { send_to: gadsId, ...safe });
     }
   } catch {

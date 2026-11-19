@@ -14,7 +14,8 @@ function assert(condition: unknown, message: string) {
 
 const ids = resolveTrackingIds({});
 assert(ids.gtmId === 'GTM-KSQPSJ6', 'gtm padrão');
-assert(ids.gadsId === 'AW-16735543241', 'ads padrão');
+assert(ids.gadsId === 'AW-18272410217', 'ads padrão');
+assert(ids.gadsWhatsappLabel === 'zlu4CNuHttQcEOm0-4hE', 'label do WhatsApp');
 assert(ids.metaPixelId === '885945550716019', 'pixel padrão');
 assert(ids.ga4Id === 'G-SK9H5S6H1K', 'ga4 padrão');
 assert(ids.gtmId !== 'GTM-5L9MXBST' && ids.gadsId !== 'AW-17096558483', 'ids antigos fora');
@@ -25,7 +26,6 @@ const banned = resolveTrackingIds({
 });
 assert(banned.gtmId === TRACKING_FALLBACKS.VITE_GTM_ID, 'gtm banido volta ao padrão');
 assert(banned.gadsId === TRACKING_FALLBACKS.VITE_GADS_ID, 'ads banido volta ao padrão');
-
 const disabled = resolveTrackingIds({
   VITE_GTM_ID: '',
   VITE_GADS_ID: '',
@@ -39,7 +39,10 @@ const html = renderTrackingSnippets(ids);
 const combined = `${html.head}\n${html.bodyStart}`;
 assert(combined.includes('GTM-KSQPSJ6'), 'snippet gtm');
 assert(combined.includes('ns.html?id=GTM-KSQPSJ6'), 'noscript gtm');
-assert(combined.includes('AW-16735543241'), 'snippet ads');
+assert(combined.includes('AW-18272410217'), 'snippet ads');
+assert(combined.includes('zlu4CNuHttQcEOm0-4hE'), 'label exposto para o GTM');
+assert(!combined.includes("gtag('event', 'conversion'"), 'sem conversão no HTML');
+assert(!combined.includes('AW-16735543241'), 'snippet sem conta suspensa');
 assert(combined.includes('send_page_view: false'), 'ads sem page_view automático');
 assert(combined.includes('885945550716019'), 'snippet pixel');
 assert(combined.includes("fbq('track', 'PageView')"), 'pageview inicial do pixel');
