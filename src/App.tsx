@@ -13,6 +13,16 @@ import {
   findServiceBySlug,
   VistoriaService,
 } from './data/campinasData';
+import { serviceTrack, whatsappTrack } from './tracking';
+
+function serviceShortTitle(id: string): string {
+  return VISTORIA_SERVICES.find((s) => s.id === id)?.shortTitle ?? id;
+}
+
+function formServiceTrackingName(value: string): string {
+  const match = VISTORIA_SERVICES.find((s) => s.title === value || s.shortTitle === value);
+  return match?.shortTitle ?? value;
+}
 
 const SITELINK_SECTIONS: Record<string, string> = {
   'sobre-nos': 'sobre-nos',
@@ -403,6 +413,7 @@ export function App() {
               Fixo {CENTRAL_DISPLAY}
             </a>
             <a
+              {...whatsappTrack('topbar', activeLpService?.shortTitle)}
               href={buildWhatsAppUrl(
                 activeLpService
                   ? activeLpService.whatsappMsg
@@ -464,6 +475,7 @@ export function App() {
                 {PUBLIC_MAIN_SERVICES.map((svc) => (
                   <a
                     key={svc.id}
+                    {...serviceTrack('menu_servicos', svc.shortTitle)}
                     href={`/${svc.slug}`}
                     aria-current={activeLpService?.id === svc.id ? 'page' : undefined}
                     onClick={(e) => {
@@ -509,6 +521,7 @@ export function App() {
             </a>
 
             <a
+              {...whatsappTrack('header', activeLpService?.shortTitle)}
               className="btn btn-sm btn-wa"
               href={buildWhatsAppUrl(
                 activeLpService
@@ -573,6 +586,7 @@ export function App() {
                       </div>
                       <div className="ctas">
                         <a
+                          {...whatsappTrack('lp_hero', activeLpService.shortTitle)}
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(activeLpService.whatsappMsg)}
                           target="_blank"
@@ -649,6 +663,7 @@ export function App() {
                     </ul>
                     <div className="ctas" style={{ marginTop: 20 }}>
                       <a
+                        {...whatsappTrack('lp_incluso', activeLpService.shortTitle)}
                         className="btn btn-wa"
                         style={{ width: '100%' }}
                         href={buildWhatsAppUrl(activeLpService.whatsappMsg)}
@@ -682,6 +697,7 @@ export function App() {
                         </p>
                         <div className="pj-pills">
                           <a
+                            {...serviceTrack('lp_upsell', serviceShortTitle('vistoria-km-scanner'))}
                             href="/vistoria-km-scanner"
                             className="pj-pill"
                             onClick={(e) => {
@@ -695,6 +711,10 @@ export function App() {
                             <Icon name="gauge" /> Scanner de Módulo (KM Real)
                           </a>
                           <a
+                            {...serviceTrack(
+                              'lp_upsell',
+                              serviceShortTitle('vistoria-bateria-eletricos')
+                            )}
                             href="/vistoria-bateria-eletricos"
                             className="pj-pill"
                             onClick={(e) => {
@@ -712,6 +732,10 @@ export function App() {
                       </div>
                       <div className="ctas">
                         <a
+                          {...whatsappTrack(
+                            'lp_upsell',
+                            `${activeLpService.shortTitle} + KM com Scanner de Módulo / Bateria Elétricos e Híbridos`
+                          )}
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(
                             `Olá! Quero agendar a ${activeLpService.shortTitle} junto com o Scanner de Módulo / Bateria EV.`
@@ -734,6 +758,7 @@ export function App() {
                     {PUBLIC_MAIN_SERVICES.filter((s) => s.id !== activeLpService.id).map((s) => (
                       <a
                         key={s.id}
+                        {...serviceTrack('lp_outras_vistorias', s.shortTitle)}
                         href={`/${s.slug}`}
                         className="pill"
                         onClick={(e) => {
@@ -788,6 +813,7 @@ export function App() {
                       </p>
                       <div className="ctas">
                         <a
+                          {...whatsappTrack('hero_compra_transferencia')}
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(
                             'Olá! Vim pelo site da Auto Visão Campinas e quero agendar uma vistoria.'
@@ -835,6 +861,10 @@ export function App() {
                       </p>
                       <div className="ctas">
                         <a
+                          {...whatsappTrack(
+                            'hero_scanner_bateria',
+                            'KM com Scanner de Módulo + Bateria Elétricos e Híbridos'
+                          )}
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(
                             'Olá! Quero agendar Scanner de Módulo (KM Real) / Vistoria de Bateria EV em Campinas.'
@@ -846,6 +876,7 @@ export function App() {
                           <span>Agendar Scanner / Bateria EV</span>
                         </a>
                         <a
+                          {...serviceTrack('hero_scanner_bateria', serviceShortTitle('vistoria-km-scanner'))}
                           className="btn btn-ghost-w"
                           href="/vistoria-km-scanner"
                           onClick={(e) => {
@@ -887,6 +918,7 @@ export function App() {
                       </p>
                       <div className="ctas">
                         <a
+                          {...whatsappTrack('hero_vistoria_360', serviceShortTitle('vistoria-360'))}
                           className="btn btn-wa"
                           href={buildWhatsAppUrl(
                             'Olá! Quero agendar a Nossa Vistoria 360º® em Campinas.'
@@ -898,6 +930,7 @@ export function App() {
                           <span>Agendar Vistoria 360º®</span>
                         </a>
                         <a
+                          {...serviceTrack('hero_vistoria_360', serviceShortTitle('vistoria-360'))}
                           className="btn btn-dark"
                           href="/vistoria-360"
                           onClick={(e) => {
@@ -1038,6 +1071,7 @@ export function App() {
                           style={{ position: 'relative', zIndex: 1, marginTop: 'auto' }}
                         >
                           <a
+                            {...whatsappTrack('home_destaque', svc.shortTitle)}
                             className={isRed && svc.id === 'vistoria-cautelar' ? 'btn btn-dark' : 'btn btn-wa'}
                             href={buildWhatsAppUrl(svc.whatsappMsg)}
                             target="_blank"
@@ -1047,6 +1081,7 @@ export function App() {
                             <span>Agendar</span>
                           </a>
                           <a
+                            {...serviceTrack('home_destaque', svc.shortTitle)}
                             className="btn btn-ghost-w"
                             href={`/${svc.slug}`}
                             onClick={(e) => {
@@ -1127,6 +1162,7 @@ export function App() {
                           }}
                         >
                           <a
+                            {...whatsappTrack('home_outros_servicos', svc.shortTitle)}
                             className="btn btn-sm btn-wa"
                             href={buildWhatsAppUrl(svc.whatsappMsg)}
                             target="_blank"
@@ -1136,6 +1172,7 @@ export function App() {
                             <span>Agendar</span>
                           </a>
                           <a
+                            {...serviceTrack('home_outros_servicos', svc.shortTitle)}
                             href={`/${svc.slug}`}
                             className="link-arrow"
                             onClick={(e) => {
@@ -1161,6 +1198,7 @@ export function App() {
                     </h3>
                     <div className="pj-pills">
                       <a
+                        {...serviceTrack('home_empresas', serviceShortTitle('vistoria-seguradora'))}
                         href="/vistoria-seguradora"
                         className="pj-pill"
                         onClick={(e) => {
@@ -1173,6 +1211,7 @@ export function App() {
                         <Icon name="shield" /> Seguradora
                       </a>
                       <a
+                        {...serviceTrack('home_empresas', serviceShortTitle('vistoria-financeira'))}
                         href="/vistoria-financeira"
                         className="pj-pill"
                         onClick={(e) => {
@@ -1185,6 +1224,10 @@ export function App() {
                         <Icon name="building" /> Financeira / Consórcio
                       </a>
                       <a
+                        {...serviceTrack(
+                          'home_empresas',
+                          serviceShortTitle('vistoria-protecao-automotiva')
+                        )}
                         href="/vistoria-protecao-automotiva"
                         className="pj-pill"
                         onClick={(e) => {
@@ -1199,6 +1242,7 @@ export function App() {
                         <Icon name="shield" /> Proteção Automotiva
                       </a>
                       <a
+                        {...serviceTrack('home_empresas', serviceShortTitle('para-empresas'))}
                         href="/para-empresas"
                         className="pj-pill"
                         onClick={(e) => {
@@ -1214,6 +1258,7 @@ export function App() {
                   </div>
                   <div className="ctas">
                     <a
+                      {...whatsappTrack('home_empresas', serviceShortTitle('para-empresas'))}
                       className="btn btn-wa"
                       href={buildWhatsAppUrl(
                         'Olá! Vim pelo site da Auto Visão Campinas e preciso de atendimento para Empresa (PJ).'
@@ -1309,6 +1354,7 @@ export function App() {
                     </p>
                     <div className="ctas">
                       <a
+                        {...whatsappTrack('assistente', wizardRecommendation.shortTitle)}
                         className="btn btn-wa"
                         href={buildWhatsAppUrl(wizardRecommendation.whatsappMsg)}
                         target="_blank"
@@ -1318,6 +1364,7 @@ export function App() {
                         <span>Agendar Agora</span>
                       </a>
                       <a
+                        {...serviceTrack('assistente', wizardRecommendation.shortTitle)}
                         className="btn btn-ghost-w"
                         href={`/${wizardRecommendation.slug}`}
                         onClick={(e) => {
@@ -1355,6 +1402,7 @@ export function App() {
               </div>
               <div className="ctas">
                 <a
+                  {...whatsappTrack('plantao_abolicao')}
                   className="btn btn-sm btn-wa"
                   href={buildWhatsAppUrl(
                     'Olá! Quero agendar na Unidade de Plantão Abolição (Sábado até 16h).'
@@ -1463,6 +1511,7 @@ export function App() {
                     </div>
                     <div className="unit-f">
                       <a
+                        {...whatsappTrack(`unidade_${u.id}`)}
                         className="btn btn-sm btn-wa"
                         href={buildWhatsAppUrl(u.whatsappMsg)}
                         target="_blank"
@@ -1494,6 +1543,7 @@ export function App() {
                 <h3>Qual loja fica mais perto de você?</h3>
                 <p>Mande sua localização no WhatsApp e indicamos a unidade ideal na hora.</p>
                 <a
+                  {...whatsappTrack('unidades_ajuda')}
                   className="btn btn-white"
                   href={buildWhatsAppUrl(
                     'Olá! Quero saber qual das 5 lojas de Campinas está mais perto de mim.'
@@ -1642,7 +1692,12 @@ export function App() {
                 </div>
 
                 <div className="full" style={{ marginTop: 6 }}>
-                  <button type="submit" className="btn btn-wa" style={{ width: '100%' }}>
+                  <button
+                    {...whatsappTrack('formulario_agendamento', formServiceTrackingName(formService))}
+                    type="submit"
+                    className="btn btn-wa"
+                    style={{ width: '100%' }}
+                  >
                     <Icon name="wa" />
                     <span>Enviar para o WhatsApp</span>
                   </button>
@@ -1667,6 +1722,7 @@ export function App() {
               </p>
               <div className="ctas">
                 <a
+                  {...whatsappTrack('faq')}
                   className="btn btn-wa"
                   href={buildWhatsAppUrl(
                     'Olá! Vim pelo site da Auto Visão Campinas e tenho uma dúvida.'
@@ -1712,6 +1768,7 @@ export function App() {
             </div>
             <div className="final-card">
               <a
+                {...whatsappTrack('cta_final', activeLpService?.shortTitle)}
                 className="btn btn-wa"
                 href={buildWhatsAppUrl(
                   activeLpService
@@ -1754,6 +1811,7 @@ export function App() {
                 Campinas e mais de 240 lojas no Brasil.
               </p>
               <a
+                {...whatsappTrack('rodape')}
                 className="ft-wa"
                 href={buildWhatsAppUrl(
                   'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
@@ -1772,6 +1830,7 @@ export function App() {
                 {PUBLIC_MAIN_SERVICES.map((s) => (
                   <li key={s.id}>
                     <a
+                      {...serviceTrack('rodape', s.shortTitle)}
                       href={`/${s.slug}`}
                       onClick={(e) => {
                         e.preventDefault();
@@ -1809,6 +1868,7 @@ export function App() {
               <ul>
                 <li>
                   <a
+                    {...whatsappTrack('rodape_atendimento')}
                     href={buildWhatsAppUrl(
                       'Olá! Vim pelo site da Auto Visão Campinas e gostaria de agendar uma vistoria.'
                     )}
@@ -2013,6 +2073,7 @@ export function App() {
                       <span>Google Maps</span>
                     </a>
                     <a
+                      {...whatsappTrack(`sheet_unidade_${u.id}`)}
                       href={buildWhatsAppUrl(u.whatsappMsg)}
                       target="_blank"
                       rel="noopener"
@@ -2058,6 +2119,7 @@ export function App() {
               {PUBLIC_MAIN_SERVICES.map((svc) => (
                 <a
                   key={svc.id}
+                  {...serviceTrack('menu_mobile_servicos', svc.shortTitle)}
                   href={`/${svc.slug}`}
                   className="sheet-svc-item"
                   onClick={(e) => {
@@ -2150,6 +2212,7 @@ export function App() {
 
       {/* BOTÃO FLUTUANTE WHATSAPP DESKTOP + VOLTAR AO TOPO */}
       <a
+        {...whatsappTrack('botao_flutuante', activeLpService?.shortTitle)}
         className="fab"
         href={buildWhatsAppUrl(
           activeLpService
@@ -2176,6 +2239,7 @@ export function App() {
       {/* BARRA FIXA DE CELULAR COM OS 3 BOTÕES: WHATSAPP, ENDEREÇOS (5), SERVIÇOS */}
       <nav className="mbar" aria-label="Atalhos rápidos no celular">
         <a
+          {...whatsappTrack('barra_mobile', activeLpService?.shortTitle)}
           className="wa"
           href={buildWhatsAppUrl(
             activeLpService

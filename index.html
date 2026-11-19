@@ -3,6 +3,46 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5L9MXBST');</script>
+  <!-- End Google Tag Manager -->
+
+  <!--
+    Google tag (gtag.js) — Google Ads AW-17096558483.
+    send_page_view:false de propósito: o page_view automático duplicaria
+    o hit se o contêiner GTM-5L9MXBST também tiver tag deste AW id.
+    O módulo src/tracking.ts envia um único page_view para este id quando
+    o GTM não disparou, e outro a cada troca de rota da SPA.
+    Ver o comentário no topo de src/tracking.ts.
+  -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17096558483"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-17096558483', { send_page_view: false });
+  </script>
+
+  <!-- Meta Pixel — Auto Visão und campinas (885945550716019).
+       O PageView abaixo é o da carga inicial. Rotas da SPA disparam
+       outro PageView em src/tracking.ts, sem repetir este. -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '885945550716019');
+    fbq('track', 'PageView');
+  </script>
   <title>Vistoria Veicular em Campinas | 5 Lojas Credenciadas DETRAN-SP | Auto Visão®</title>
   <meta name="description" content="Auto Visão Campinas: 5 lojas credenciadas pelo DETRAN-SP (Taquaral, Centro, Ponte Preta/Abolição, Campos Elíseos e Parque Industrial). Vistoria do DETRAN (Transferência), Vistoria Cautelar, Vistoria 360º®, Pintura, Scanner de KM, Bateria Elétricos/Híbridos, Pesados, Financeira, Seguradora, Proteção Automotiva, Pátio Público, Infração e Premium. Plantão aos sábados até 16h!" />
   <meta name="keywords" content="vistoria veicular campinas, vistoria detran campinas, vistoria cautelar campinas, vistoria transferencia campinas, auto visao campinas, laudo cautelar campinas, vistoria 360 auto visao, vistoria carros eletricos campinas, vistoria caminhao campinas, vistoria abolição campinas, vistoria taquaral campinas, vistoria amoreiras campinas" />
@@ -237,6 +277,13 @@
   </script>
 </head>
 <body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5L9MXBST"
+  height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  <noscript><img height="1" width="1" style="display:none" alt=""
+    src="https://www.facebook.com/tr?id=885945550716019&ev=PageView&noscript=1"
+  /></noscript>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
