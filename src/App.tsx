@@ -549,7 +549,11 @@ export function App() {
               </div>
             </div>
 
-            <section className="hero svc-hero" aria-label={activeLpService.title}>
+            <section
+              className="hero svc-hero"
+              data-service-view={activeLpService.id}
+              aria-label={activeLpService.title}
+            >
               <div className="slides">
                 <div className={`slide ${activeLpService.heroTheme} is-on`}>
                   <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
@@ -713,6 +717,7 @@ export function App() {
                       <div className="ctas">
                         <a
                           className="btn btn-wa"
+                          data-upsell="scanner-bateria"
                           href={buildWhatsAppUrl(
                             `Olá! Quero agendar a ${activeLpService.shortTitle} junto com o Scanner de Módulo / Bateria EV.`
                           )}
@@ -730,7 +735,7 @@ export function App() {
                   <p style={{ fontWeight: 800, marginBottom: 12, color: 'var(--impact)' }}>
                     Outras vistorias em Campinas:
                   </p>
-                  <div className="pills">
+                  <div className="pills" data-track-location="lp_outros">
                     {PUBLIC_MAIN_SERVICES.filter((s) => s.id !== activeLpService.id).map((s) => (
                       <a
                         key={s.id}
@@ -768,6 +773,7 @@ export function App() {
                 {/* SLIDE 1: DETRAN + CAUTELAR */}
                 <div
                   className={`slide red ${heroSlide === 0 ? 'is-on' : ''}`}
+                  data-track-location="hero_1"
                   role="group"
                   aria-roledescription="banner"
                   aria-label="1 de 3"
@@ -818,6 +824,7 @@ export function App() {
                 {/* SLIDE 2: SCANNER DE MÓDULO (KM REAL) & BATERIA EV */}
                 <div
                   className={`slide dark ${heroSlide === 1 ? 'is-on' : ''}`}
+                  data-track-location="hero_2"
                   role="group"
                   aria-roledescription="banner"
                   aria-label="2 de 3"
@@ -836,6 +843,7 @@ export function App() {
                       <div className="ctas">
                         <a
                           className="btn btn-wa"
+                          data-service-name="Scanner de KM e Bateria EV"
                           href={buildWhatsAppUrl(
                             'Olá! Quero agendar Scanner de Módulo (KM Real) / Vistoria de Bateria EV em Campinas.'
                           )}
@@ -866,6 +874,8 @@ export function App() {
                 {/* SLIDE 3: VISTORIA 360º® */}
                 <div
                   className={`slide red ${heroSlide === 2 ? 'is-on' : ''}`}
+                  data-track-location="hero_3"
+                  data-service-id="vistoria-360"
                   role="group"
                   aria-roledescription="banner"
                   aria-label="3 de 3"
@@ -1019,6 +1029,7 @@ export function App() {
                       <article
                         key={svc.id}
                         id={svc.id}
+                        data-service-view={svc.id}
                         className={`flagship-card compact ${isRed ? 'cautelar' : 'detran'} ${
                           isEv ? 'highlight-ev' : ''
                         }`}
@@ -1097,7 +1108,7 @@ export function App() {
 
                   <div className="grid-sv">
                     {secondaryServices.map((svc) => (
-                      <article key={svc.id} id={`card-${svc.id}`} className="sv">
+                      <article key={svc.id} id={`card-${svc.id}`} data-service-view={svc.id} className="sv">
                         <div className="sv-top">
                           <span className="ico">
                             <Icon name={svc.icon} />
@@ -1153,7 +1164,7 @@ export function App() {
                 </div>
 
                 {/* FAIXA SIMPLIFICADA PARA EMPRESAS (PJ) */}
-                <div className="pj-strip">
+                <div className="pj-strip" data-service-view="para-empresas">
                   <div>
                     <span className="kicker">Para Empresas (PJ)</span>
                     <h3>
@@ -1215,6 +1226,7 @@ export function App() {
                   <div className="ctas">
                     <a
                       className="btn btn-wa"
+                      data-service-id="para-empresas"
                       href={buildWhatsAppUrl(
                         'Olá! Vim pelo site da Auto Visão Campinas e preciso de atendimento para Empresa (PJ).'
                       )}
@@ -1295,7 +1307,7 @@ export function App() {
                     </div>
                   </div>
 
-                  <div className="wz-out" aria-live="polite">
+                  <div className="wz-out" data-service-view={wizardRecommendation.id} aria-live="polite">
                     <svg className="rings" viewBox="0 0 800 800" aria-hidden="true">
                       <use href="#rings" />
                     </svg>

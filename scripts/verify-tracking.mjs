@@ -1,0 +1,268 @@
+import { spawn } from 'node:child_process';
+
+const PREVIEW_PORT = 4173;
+const CDP_PORT = 9333;
+const PAGE = `http://127.0.0.1:${PREVIEW_PORT}/?utm_source=google&utm_medium=cpc&utm_campaign=campinas&gclid=TeSt-click_123`;
+
+const preview = spawn(
+  'npx',
+  ['vite', 'preview', '--host', '127.0.0.1', '--port', String(PREVIEW_PORT), '--strictPort'],
+  { stdio: 'ignore' }
+);
+const chrome = spawn(
+  'google-chrome',
+  [
+    '--headless=new',
+    '--disable-gpu',
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
+    '--no-first-run',
+    `--remote-debugging-port=${CDP_PORT}`,
+    '--user-data-dir=/tmp/chrome-av-tracking',
+    '--window-size=1280,900',
+  ],
+  { stdio: 'ignore' }
+);
+
+const shutdown = () => {
+  preview.kill('SIGTERM');
+  chrome.kill('SIGTERM');
+};
+process.on('exit', shutdown);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForHttp(url) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (response.ok || response.status === 400) return;
+    } catch {
+      // ainda subindo
+    }
+    await sleep(200);
+  }
+  throw new Error(`Sem resposta de ${url}`);
+}
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+async function main() {
+  await waitForHttp(`http://127.0.0.1:${PREVIEW_PORT}/`);
+  await waitForHttp(`http://127.0.0.1:${CDP_PORT}/json/version`);
+  const created = await fetch(`http://127.0.0.1:${CDP_PORT}/json/new?${encodeURIComponent(PAGE)}`, {
+    method: 'PUT',
+  });
+  if (!created.ok) throw new Error(`Chrome não abriu a página (${created.status})`);
+  const target = await created.json();
+  const ws = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    ws.addEventListener('open', resolve);
+    ws.addEventListener('error', reject);
+  });
+
+  let nextId = 0;
+  const pending = new Map();
+  const exceptions = [];
+  ws.addEventListener('message', (event) => {
+    const message = JSON.parse(event.data);
+    if (message.id && pending.has(message.id)) {
+      const { resolve, reject } = pending.get(message.id);
+      pending.delete(message.id);
+      if (message.error) reject(new Error(JSON.stringify(message.error)));
+      else resolve(message.result);
+      return;
+    }
+    if (message.method === 'Runtime.exceptionThrown') {
+      exceptions.push(message.params.exceptionDetails?.text || 'exception');
+    }
+  });
+
+  const send = (method, params = {}) =>
+    new Promise((resolve, reject) => {
+      const id = ++nextId;
+      pending.set(id, { resolve, reject });
+      ws.send(JSON.stringify({ id, method, params }));
+    });
+
+  await send('Runtime.enable');
+  await send('Page.enable');
+  await sleep(600);
+
+  const evalJson = async (expression) => {
+    const result = await send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (result.exceptionDetails) {
+      throw new Error(result.exceptionDetails.text || 'Falha ao avaliar a página');
+    }
+    return result.result.value;
+  };
+
+  await evalJson(`(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.__fbqCalls = [];
+    window.__gtagCalls = [];
+    const origFbq = window.fbq;
+    window.fbq = function () {
+      window.__fbqCalls.push(Array.from(arguments).map((item) =>
+        typeof item === 'object' && item ? JSON.parse(JSON.stringify(item)) : item
+      ));
+      return origFbq && origFbq.apply(this, arguments);
+    };
+    const origGtag = window.gtag;
+    window.gtag = function () {
+      window.__gtagCalls.push(Array.from(arguments).map((item) =>
+        typeof item === 'object' && item ? JSON.parse(JSON.stringify(item)) : item
+      ));
+      return origGtag && origGtag.apply(this, arguments);
+    };
+    window.open = () => null;
+    document.addEventListener('click', (event) => {
+      const anchor = event.target.closest?.('a');
+      if (!anchor) return;
+      const raw = anchor.getAttribute('href') || '';
+      if (anchor.target === '_blank' || raw.startsWith('tel:') || raw.startsWith('mailto:')) {
+        event.preventDefault();
+      }
+    }, true);
+    return true;
+  })()`);
+
+  const boot = await evalJson(`(() => ({
+    tracking: window.AV_TRACKING,
+    hasGa4Config: /gtag\\('config',\\s*"G-/.test(document.documentElement.outerHTML),
+    hasOldIds: /GTM-5L9MXBST|AW-17096558483/.test(document.documentElement.outerHTML),
+    sendPageViewFalse: document.documentElement.outerHTML.includes('send_page_view: false'),
+    initialPageViews: (document.documentElement.outerHTML.match(/fbq\\('track', 'PageView'\\)/g) || []).length,
+  }))()`);
+  assert(boot.tracking.gtmId === 'GTM-KSQPSJ6', 'GTM na página');
+  assert(boot.tracking.gadsId === 'AW-16735543241', 'Google Ads na página');
+  assert(boot.tracking.metaPixelId === '885945550716019', 'Pixel na página');
+  assert(boot.tracking.ga4Id === 'G-SK9H5S6H1K', 'GA4 exposto');
+  assert(boot.sendPageViewFalse === true, 'Ads sem page_view automático');
+  assert(boot.hasGa4Config === false, 'sem gtag de GA4');
+  assert(boot.hasOldIds === false, 'sem IDs de outra unidade');
+  assert(boot.initialPageViews === 1, 'PageView inicial único no HTML');
+
+  await evalJson(`document.querySelector('[data-service-view="vistoria-premium"]').scrollIntoView({ block: 'center' })`);
+  await sleep(400);
+
+  await evalJson(`document.querySelector('#vistoria-cautelar a[href="/vistoria-cautelar"]').click()`);
+  await sleep(500);
+
+  await evalJson(`document.querySelector('.svc-hero .btn-wa').click()`);
+  await sleep(200);
+
+  await evalJson(`(() => {
+    const setValue = (el, value) => {
+      const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
+      Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, value);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    setValue(document.querySelector('#sch-name'), 'ZezinhoRastreio');
+    setValue(document.querySelector('#sch-phone'), '11988887777');
+    setValue(document.querySelector('#sch-plate'), 'ABC1D23');
+    document.querySelector('.schedule-form button[type="submit"]').click();
+    return true;
+  })()`);
+  await sleep(200);
+
+  await evalJson(`document.querySelector('a[href^="tel:"]').click()`);
+  await evalJson(`document.querySelector('#nossas-lojas a[href*="waze.com"]').click()`);
+  await evalJson(`window.scrollTo({ top: 0, behavior: 'instant' });`);
+  await sleep(800);
+  await evalJson(`window.dataLayer.push({ event: 'test_marker', av_source: 'test' }); window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });`);
+  await sleep(400);
+
+  const report = await evalJson(`(() => {
+    const appEvents = (window.dataLayer || []).filter((item) => item && item.av_source === 'app');
+    const marker = (window.dataLayer || []).findIndex((item) => item && item.event === 'test_marker');
+    const afterMarker = (window.dataLayer || []).slice(marker + 1).filter((item) => item && item.av_source === 'app');
+    return {
+      path: location.pathname,
+      events: appEvents,
+      afterMarker,
+      fbq: window.__fbqCalls,
+      gtag: window.__gtagCalls,
+      interest: JSON.parse(localStorage.getItem('av_campinas_interest') || '[]'),
+      dumped: JSON.stringify(appEvents),
+    };
+  })()`);
+
+  const names = report.events.map((item) => item.event);
+  const find = (event, pred = () => true) => report.events.find((item) => item.event === event && pred(item));
+  assert(report.path === '/vistoria-cautelar', `rota do serviço, veio ${report.path}`);
+  assert(find('service_view', (item) => item.service_id === 'vistoria-premium'), 'service_view do Premium');
+  assert(
+    find('service_click', (item) => item.service_id === 'vistoria-cautelar' && item.button_location === 'card_destaque'),
+    'service_click da Cautelar'
+  );
+  assert(find('spa_navigation', (item) => item.page_path === '/vistoria-cautelar'), 'spa_navigation');
+  assert(
+    find('whatsapp_click', (item) => item.button_location === 'lp_hero' && item.service_name === 'Cautelar'),
+    'whatsapp do hero do serviço'
+  );
+  assert(
+    find('whatsapp_click', (item) => item.button_location === 'formulario' && item.service_name === 'Cautelar'),
+    'whatsapp do formulário'
+  );
+  assert(find('phone_click', (item) => item.button_location === 'topbar'), 'phone_click');
+  assert(
+    find('map_click', (item) => item.map_provider === 'waze' && item.unit_id),
+    'map_click do Waze'
+  );
+  for (const percent of [25, 50, 75, 90]) {
+    assert(
+      report.afterMarker.some((item) => item.event === 'scroll_depth' && item.percent === percent),
+      `scroll_depth ${percent}`
+    );
+  }
+  assert(report.events.every((item) => item.traffic_source === 'google_ads'), 'origem do clique');
+  assert(report.events.every((item) => item.gclid === 'TeSt-click_123'), 'gclid nos eventos');
+  assert(report.events.every((item) => item.utm_campaign === 'campinas'), 'utm_campaign nos eventos');
+  assert(!names.includes('page_view') && !names.includes('scroll') && !names.includes('click'), 'sem evento automático');
+  assert(!report.dumped.includes('ZezinhoRastreio'), 'nome fora dos eventos');
+  assert(!report.dumped.includes('11988887777'), 'telefone fora dos eventos');
+  assert(!report.dumped.includes('ABC1D23'), 'placa fora dos eventos');
+  assert(report.interest.includes('vistoria-premium'), 'interesse guardado');
+  assert(
+    report.fbq.some((call) => call[0] === 'track' && call[1] === 'ViewContent' && call[2]?.content_category === 'servico'),
+    'Meta ViewContent'
+  );
+  assert(
+    report.fbq.filter((call) => call[0] === 'track' && call[1] === 'PageView').length === 1,
+    'um PageView extra na troca de rota'
+  );
+  assert(report.fbq.some((call) => call[0] === 'track' && call[1] === 'Contact'), 'Meta Contact');
+  assert(report.fbq.some((call) => call[0] === 'track' && call[1] === 'Lead'), 'Meta Lead');
+  assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'ServiceClick'), 'Meta ServiceClick');
+  assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'FindLocation'), 'Meta FindLocation');
+  assert(report.fbq.some((call) => call[0] === 'trackCustom' && call[1] === 'ScrollDepth'), 'Meta ScrollDepth');
+  assert(
+    report.gtag.some((call) => call[0] === 'event' && call[1] === 'whatsapp_click' && call[2]?.send_to === 'AW-16735543241'),
+    'gtag do WhatsApp só para o AW'
+  );
+  assert(!report.gtag.some((call) => call[1] === 'G-SK9H5S6H1K' || call[2]?.send_to === 'G-SK9H5S6H1K'), 'gtag não envia ao GA4');
+  assert(exceptions.length === 0, `exceção na página: ${exceptions.join(' | ')}`);
+
+  console.log(`eventos ok: ${[...new Set(names)].join(', ')}`);
+  ws.close();
+}
+
+main()
+  .then(() => {
+    shutdown();
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error(error);
+    shutdown();
+    process.exit(1);
+  });
